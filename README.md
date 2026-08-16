@@ -130,16 +130,15 @@ Princípio arquitetural:
 
 - Next.js
 - React
-- TypeScript
 - JavaScript
 
-O projeto será desenvolvido em TypeScript, que é baseado em JavaScript e permite tipagem estática durante o desenvolvimento.
+O projeto será desenvolvido em JavaScript.
 
 ### Backend / API
 
 - Next.js API Routes
 - REST-style API
-- TypeScript
+- JavaScript
 
 ### Banco de dados
 
@@ -176,7 +175,7 @@ O projeto foi planejado para contemplar os requisitos técnicos apresentados par
 | ------------------------------ | ---------------------------------------------------------------------- |
 | **Framework Web**              | Next.js + React                                                        |
 | **Banco de dados**             | PostgreSQL + Prisma                                                    |
-| **JavaScript / Web Scripting** | React/Next.js e TypeScript baseado em JavaScript                       |
+| **JavaScript / Web Scripting** | React/Next.js e JavaScript                                             |
 | **Computação em nuvem**        | Deploy e/ou serviços de infraestrutura em cloud                        |
 | **Integração com APIs**        | API REST desenvolvida com Next.js API Routes                           |
 | **Acessibilidade**             | Interface desenvolvida considerando princípios de IHC e acessibilidade |
@@ -501,7 +500,7 @@ Além do fluxo funcional, o projeto deverá demonstrar:
 
 - Uso de framework web.
 - Persistência em banco de dados.
-- Uso de JavaScript/TypeScript no desenvolvimento web.
+- Uso de JavaScript no desenvolvimento web.
 - API.
 - Recursos de cloud.
 - Acessibilidade.
