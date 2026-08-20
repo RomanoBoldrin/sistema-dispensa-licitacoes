@@ -2,7 +2,6 @@
   "name": "sistema-dispensa-licitacoes",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "dotenv -e .env.development -- next dev -p 3000",
     "dev:test": "dotenv -e .env.test -- next dev -p 3000",
@@ -31,6 +30,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
+    "cookie": "^2.0.1",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
