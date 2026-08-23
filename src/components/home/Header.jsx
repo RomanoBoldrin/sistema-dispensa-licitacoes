@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-outline-variant bg-surface/95 backdrop-blur-sm">
@@ -42,12 +44,12 @@ export default function Header() {
             Criar conta
           </button>
 
-          <button
-            type="button"
+          <Link
+            href="/login"
             className="flex items-center gap-base rounded bg-primary-container px-sm py-xs font-label-md text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Entrar
-          </button>
+          </Link>
         </div>
       </div>
     </header>
