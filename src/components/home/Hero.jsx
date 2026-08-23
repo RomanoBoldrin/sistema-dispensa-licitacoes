@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Hero() {
   return (
     <section className="mx-auto flex max-w-container-max flex-col items-center gap-lg px-gutter py-xl text-center md:py-20">
@@ -18,12 +20,12 @@ export default function Hero() {
           Criar conta
         </button>
 
-        <button
-          type="button"
-          className="w-full rounded-lg border border-primary px-lg py-sm font-label-md text-primary transition-colors hover:bg-primary-container/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:w-auto"
+        <Link
+          href="/login"
+          className="flex w-full items-center justify-center rounded-lg border border-primary px-lg py-sm font-label-md text-primary transition-colors hover:bg-primary-container/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:w-auto"
         >
           Entrar
-        </button>
+        </Link>
       </div>
 
       {/* Dashboard Preview Mockup */}
