@@ -32,6 +32,7 @@
     "@faker-js/faker": "10.6.0",
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
+    "bcryptjs": "3.0.3",
     "cookie": "2.0.1",
     "next": "16.3.0",
     "next-connect": "1.0.0",
