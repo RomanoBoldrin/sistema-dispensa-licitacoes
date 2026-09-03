@@ -8,7 +8,7 @@ const customJestConfig = {
   moduleDirectories: ["node_modules", "<rootDir>"],
   testEnvironment: "node",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
-  globalSetup: "<rootDir>/jest.globalSetup.cjs",
+  globalSetup: "<rootDir>/jest.globalSetup.js",
 
   moduleNameMapper: {
     // Maps imports starting with "@/..." to the project's src directory
