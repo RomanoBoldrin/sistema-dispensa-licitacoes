@@ -37,12 +37,12 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-xs">
-          <button
-            type="button"
+          <Link
+            href="/register"
             className="rounded border border-primary px-sm py-xs font-label-md text-primary transition-colors hover:bg-secondary-container/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Criar conta
-          </button>
+          </Link>
 
           <Link
             href="/login"

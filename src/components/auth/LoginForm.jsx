@@ -213,7 +213,7 @@ export default function LoginForm({ onSubmit }) {
           </label>
 
           <Link
-            href="#recuperar-senha"
+            href="/forgot-password"
             className="font-label-sm text-primary transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Esqueceu a senha?
@@ -256,7 +256,7 @@ export default function LoginForm({ onSubmit }) {
         <p className="font-body-sm text-on-surface-variant">
           Não tem uma conta?{" "}
           <Link
-            href="#cadastro"
+            href="/register"
             className="font-label-md font-semibold text-primary transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Criar conta
