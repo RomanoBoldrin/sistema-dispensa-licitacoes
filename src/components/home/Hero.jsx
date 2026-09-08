@@ -13,12 +13,12 @@ export default function Hero() {
       </p>
 
       <div className="flex w-full flex-col justify-center gap-sm sm:w-auto sm:flex-row">
-        <button
-          type="button"
+        <Link
+          href="/register"
           className="w-full rounded-lg bg-primary-container px-lg py-sm font-label-md text-on-primary shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:w-auto"
         >
           Criar conta
-        </button>
+        </Link>
 
         <Link
           href="/login"
