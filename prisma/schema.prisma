@@ -37,7 +37,6 @@ enum ApprovalDecision {
 }
 
 enum DocumentType {
-  DEMANDA
   PESQUISA_PRECOS
   JUSTIFICATIVA_PRECO
   RAZAO_ESCOLHA_FORNECEDOR
@@ -47,10 +46,28 @@ enum DocumentType {
   OUTRO
 }
 
+enum ObjectCategory {
+  COMMON_GOODS
+  ENGINEERING_WORKS
+  GENERAL_SERVICES
+  IT_GOODS
+  HEALTH_SUPPLIES
+  OTHER
+}
+
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 enum AuditAction {
   PROCESS_CREATED
   PROCESS_UPDATED
   PROCESS_SUBMITTED
+  DEMAND_DOCUMENT_CREATED
+  DEMAND_DOCUMENT_UPDATED
   QUOTATION_ADDED
   QUOTATION_UPDATED
   SUPPLIER_SELECTED
@@ -91,7 +108,8 @@ model User {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  sessions  Session[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([departmentId])
   @@index([role])
@@ -168,6 +186,8 @@ model Process {
   approvals  Approval[]
   auditLogs  AuditLog[]
 
+  demandDocument DemandDocument?
+
   // Selected supplier
   selectedSupplierId String?   @db.Uuid
   selectedSupplier   Supplier? @relation("SelectedSupplier", fields: [selectedSupplierId], references: [id])
@@ -183,6 +203,36 @@ model Process {
   @@index([requesterId])
   @@index([selectedSupplierId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// DEMAND DOCUMENT (DFD)
+// ─────────────────────────────────────────────
+
+model DemandDocument {
+  id String @id @default(uuid()) @db.Uuid
+
+  processId String  @unique @db.Uuid
+  process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  category ObjectCategory
+
+  detailedJustification String
+  technicalSpecifications String?
+
+  urgency UrgencyLevel @default(MEDIUM)
+
+  budgetSource String?
+  desiredDeadlineDays Int?
+
+  responsibleName  String
+  responsibleEmail String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([urgency])
 }
 
 // ─────────────────────────────────────────────
@@ -307,4 +357,20 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// PASSWORD RESET TOKEN
+// ─────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
