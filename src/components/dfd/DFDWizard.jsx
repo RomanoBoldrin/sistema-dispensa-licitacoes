@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState } from "react";
 
 const CATEGORIES = [
@@ -80,8 +81,7 @@ const STEPS = [
 const inputClasses =
   "w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-sm py-2.5 font-body-md text-on-surface placeholder:text-outline transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
 
-const inputErrorClasses =
-  "border-error focus:border-error focus:ring-error/20";
+const inputErrorClasses = "border-error focus:border-error focus:ring-error/20";
 
 const labelClasses = "mb-1.5 block font-label-md text-on-surface";
 
@@ -130,9 +130,7 @@ function StepIndicator({ currentStep }) {
               {i < STEPS.length - 1 && (
                 <div
                   className={`mx-xs h-0.5 flex-1 rounded transition-colors ${
-                    i < currentStep
-                      ? "bg-primary"
-                      : "bg-outline-variant"
+                    i < currentStep ? "bg-primary" : "bg-outline-variant"
                   }`}
                 />
               )}
@@ -200,9 +198,7 @@ function StepObject({ data, onChange, errors }) {
       </div>
 
       <div>
-        <label className={labelClasses}>
-          Categoria do objeto *
-        </label>
+        <label className={labelClasses}>Categoria do objeto *</label>
         {errors.category && <FieldError message={errors.category} />}
         <div className="mt-xs grid grid-cols-1 gap-xs sm:grid-cols-2">
           {CATEGORIES.map((cat) => (
@@ -269,9 +265,7 @@ function StepDetails({ data, onChange, errors }) {
           placeholder="Ex: Os 15 computadores do setor de atendimento ao cidadão estão em uso há mais de 7 anos, apresentando lentidão significativa e falhas frequentes de hardware. A substituição é necessária para manter a qualidade do atendimento à população..."
           className={`${inputClasses} resize-none ${errors.detailedJustification ? inputErrorClasses : ""}`}
           value={data.detailedJustification}
-          onChange={(e) =>
-            onChange("detailedJustification", e.target.value)
-          }
+          onChange={(e) => onChange("detailedJustification", e.target.value)}
           aria-invalid={!!errors.detailedJustification}
         />
         <FieldError message={errors.detailedJustification} />
@@ -287,9 +281,7 @@ function StepDetails({ data, onChange, errors }) {
           placeholder="Ex: Processador Intel Core i5 12ª geração ou equivalente, 16GB DDR4, SSD 512GB NVMe, monitor 23.8' Full HD, teclado e mouse USB, sistema operacional Linux"
           className={`${inputClasses} resize-none`}
           value={data.technicalSpecifications}
-          onChange={(e) =>
-            onChange("technicalSpecifications", e.target.value)
-          }
+          onChange={(e) => onChange("technicalSpecifications", e.target.value)}
         />
         <p className="mt-1 font-label-sm text-on-surface-variant">
           Opcional — descreva requisitos técnicos específicos do objeto.
@@ -304,19 +296,23 @@ function StepDetails({ data, onChange, errors }) {
             const isSelected = data.urgency === opt.value;
             const colorMap = {
               secondary: {
-                active: "border-secondary bg-secondary-container text-on-secondary-container",
+                active:
+                  "border-secondary bg-secondary-container text-on-secondary-container",
                 icon: "text-secondary",
               },
               tertiary: {
-                active: "border-tertiary bg-tertiary-container text-on-tertiary-container",
+                active:
+                  "border-tertiary bg-tertiary-container text-on-tertiary-container",
                 icon: "text-tertiary",
               },
               "tertiary-fixed": {
-                active: "border-tertiary bg-tertiary-fixed text-on-tertiary-fixed-variant",
+                active:
+                  "border-tertiary bg-tertiary-fixed text-on-tertiary-fixed-variant",
                 icon: "text-tertiary",
               },
               error: {
-                active: "border-error bg-error-container text-on-error-container",
+                active:
+                  "border-error bg-error-container text-on-error-container",
                 icon: "text-error",
               },
             };
@@ -340,9 +336,7 @@ function StepDetails({ data, onChange, errors }) {
                 >
                   {opt.icon}
                 </span>
-                <span className="font-label-md font-bold">
-                  {opt.label}
-                </span>
+                <span className="font-label-md font-bold">{opt.label}</span>
                 <span className="font-label-sm opacity-75">
                   {opt.description}
                 </span>
@@ -429,9 +423,7 @@ function StepResponsible({ data, onChange, errors }) {
           placeholder="Ex: 30"
           className={`${inputClasses} max-w-[12rem] ${errors.desiredDeadlineDays ? inputErrorClasses : ""}`}
           value={data.desiredDeadlineDays}
-          onChange={(e) =>
-            onChange("desiredDeadlineDays", e.target.value)
-          }
+          onChange={(e) => onChange("desiredDeadlineDays", e.target.value)}
           aria-invalid={!!errors.desiredDeadlineDays}
         />
         <FieldError message={errors.desiredDeadlineDays} />
@@ -573,14 +565,12 @@ export default function DFDWizard() {
         newErrors.title = "Informe o título da demanda.";
       if (!formData.object.trim())
         newErrors.object = "Descreva o objeto da demanda.";
-      if (!formData.category)
-        newErrors.category = "Selecione uma categoria.";
+      if (!formData.category) newErrors.category = "Selecione uma categoria.";
     }
 
     if (step === 1) {
       if (!formData.detailedJustification.trim())
-        newErrors.detailedJustification =
-          "Informe a justificativa da demanda.";
+        newErrors.detailedJustification = "Informe a justificativa da demanda.";
       if (!formData.urgency)
         newErrors.urgency = "Selecione o nível de urgência.";
     }
@@ -599,8 +589,7 @@ export default function DFDWizard() {
         (isNaN(formData.desiredDeadlineDays) ||
           Number(formData.desiredDeadlineDays) < 1)
       ) {
-        newErrors.desiredDeadlineDays =
-          "Informe um prazo válido em dias.";
+        newErrors.desiredDeadlineDays = "Informe um prazo válido em dias.";
       }
     }
 
@@ -634,8 +623,7 @@ export default function DFDWizard() {
       setIsSubmitted(true);
     } catch {
       setErrors({
-        _general:
-          "Erro ao enviar o DFD. Tente novamente em instantes.",
+        _general: "Erro ao enviar o DFD. Tente novamente em instantes.",
       });
     } finally {
       setIsSubmitting(false);
@@ -654,20 +642,17 @@ export default function DFDWizard() {
           DFD enviado com sucesso!
         </h2>
         <p className="mt-xs max-w-md font-body-md text-on-surface-variant">
-          Seu Documento de Formalização da Demanda foi registrado e
-          será analisado pelo setor de contratações. Você será
-          notificado sobre o andamento.
+          Seu Documento de Formalização da Demanda foi registrado e será
+          analisado pelo setor de contratações. Você será notificado sobre o
+          andamento.
         </p>
         <div className="mt-lg flex gap-sm">
-          <a
+          <Link
             href="/dashboard"
             className="flex items-center gap-xs rounded-lg border border-outline-variant px-sm py-2 font-label-md text-on-surface transition-colors hover:bg-surface-container"
-          >
-            <span className="material-symbols-outlined text-lg">
-              dashboard
-            </span>
-            Ir para o painel
-          </a>
+          ></Link>
+          <span className="material-symbols-outlined text-lg">dashboard</span>
+          Ir para o painel
           <button
             type="button"
             onClick={() => {
@@ -688,9 +673,7 @@ export default function DFDWizard() {
             }}
             className="flex items-center gap-xs rounded-lg bg-primary px-sm py-2 font-label-md text-on-primary transition-all hover:opacity-90"
           >
-            <span className="material-symbols-outlined text-lg">
-              add
-            </span>
+            <span className="material-symbols-outlined text-lg">add</span>
             Novo DFD
           </button>
         </div>
@@ -708,20 +691,14 @@ export default function DFDWizard() {
           role="alert"
           aria-live="polite"
         >
-          <span className="material-symbols-outlined text-lg">
-            error
-          </span>
+          <span className="material-symbols-outlined text-lg">error</span>
           <span className="font-body-sm">{errors._general}</span>
         </div>
       )}
 
       <div className="min-h-[24rem]">
         {currentStep === 0 && (
-          <StepObject
-            data={formData}
-            onChange={handleChange}
-            errors={errors}
-          />
+          <StepObject data={formData} onChange={handleChange} errors={errors} />
         )}
         {currentStep === 1 && (
           <StepDetails
@@ -783,9 +760,7 @@ export default function DFDWizard() {
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-lg">
-                  send
-                </span>
+                <span className="material-symbols-outlined text-lg">send</span>
                 Enviar DFD
               </>
             )}

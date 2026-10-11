@@ -54,8 +54,8 @@ export default function NewProcessPage() {
                 Novo Documento de Formalização da Demanda
               </h1>
               <p className="mt-1 font-body-md text-on-surface-variant">
-                Preencha as informações abaixo para iniciar um novo
-                processo de dispensa de licitação.
+                Preencha as informações abaixo para iniciar um novo processo de
+                dispensa de licitação.
               </p>
             </div>
 
