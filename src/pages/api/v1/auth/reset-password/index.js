@@ -1,6 +1,6 @@
 import { createRouter } from "next-connect";
 import { prisma } from "@/infra/prisma.cjs";
-import { hashPassword } from "@/infra/password";
+import hashPassword from "@/infra/password";
 import {
   InternalServerError,
   MethodNotAllowedError,

@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function LoginForm({ onSubmit }) {
   const router = useRouter();
 
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -13,10 +13,10 @@ export default function LoginForm({ onSubmit }) {
   const [generalError, setGeneralError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleIdentifierChange = (e) => {
-    setIdentifier(e.target.value);
-    if (fieldErrors.identifier) {
-      setFieldErrors((prev) => ({ ...prev, identifier: undefined }));
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (fieldErrors.email) {
+      setFieldErrors((prev) => ({ ...prev, email: undefined }));
     }
     if (generalError) {
       setGeneralError("");
@@ -39,8 +39,8 @@ export default function LoginForm({ onSubmit }) {
     if (isLoading) return;
 
     const errors = {};
-    if (!identifier.trim()) {
-      errors.identifier = "Informe seu e-mail ou CPF.";
+    if (!email.trim()) {
+      errors.email = "Informe seu e-mail.";
     }
     if (!password) {
       errors.password = "Informe sua senha.";
@@ -58,30 +58,31 @@ export default function LoginForm({ onSubmit }) {
     try {
       if (onSubmit) {
         await onSubmit({
-          identifier: identifier.trim(),
+          email: email.trim(),
           password,
           rememberMe,
         });
       } else {
-        const response = await fetch("/api/v1/auth/login", {
+        const response = await fetch("/api/v1/auth/sessions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            identifier: identifier.trim(),
+            email: email.trim(),
             password,
-            rememberMe,
           }),
         });
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          if (response.status === 401 || response.status === 400) {
+          if (response.status === 403) {
             setGeneralError(
               data.message ||
-                "Não foi possível entrar. Verifique suas credenciais.",
+                "Usuário inativo. Entre em contato com o administrador.",
             );
+          } else if (response.status === 401 || response.status === 400) {
+            setGeneralError(data.message || "E-mail ou senha inválidos.");
           } else {
             setGeneralError(
               "Não foi possível realizar o login. Tente novamente.",
@@ -119,40 +120,38 @@ export default function LoginForm({ onSubmit }) {
       )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-md">
-        {/* Identifier Field */}
+        {/* Email Field */}
         <div>
           <label
-            htmlFor="identifier"
+            htmlFor="email"
             className="mb-1.5 block font-label-md text-on-surface"
           >
-            E-mail ou CPF
+            E-mail
           </label>
           <input
-            id="identifier"
-            name="identifier"
-            type="text"
-            autoComplete="username"
-            placeholder="Seu e-mail ou CPF"
-            value={identifier}
-            onChange={handleIdentifierChange}
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="seu@email.com"
+            value={email}
+            onChange={handleEmailChange}
             disabled={isLoading}
-            aria-invalid={Boolean(fieldErrors.identifier)}
-            aria-describedby={
-              fieldErrors.identifier ? "identifier-error" : undefined
-            }
+            aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
             className={`w-full rounded-lg border bg-surface px-sm py-2.5 font-body-md text-on-surface placeholder:text-outline transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-container/20 disabled:cursor-not-allowed disabled:opacity-60 ${
-              fieldErrors.identifier
+              fieldErrors.email
                 ? "border-error focus:border-error focus:ring-error/20"
                 : "border-outline-variant"
             }`}
           />
-          {fieldErrors.identifier && (
+          {fieldErrors.email && (
             <span
-              id="identifier-error"
+              id="email-error"
               role="alert"
               className="mt-1 block font-label-sm text-error"
             >
-              {fieldErrors.identifier}
+              {fieldErrors.email}
             </span>
           )}
         </div>
@@ -243,26 +242,10 @@ export default function LoginForm({ onSubmit }) {
         </button>
       </form>
 
-      {/* Divider */}
-      <div className="relative my-lg flex items-center justify-center">
-        <div className="w-full border-t border-outline-variant" />
-        <span className="absolute bg-surface-container-lowest px-sm font-label-sm text-outline">
-          ou
-        </span>
-      </div>
-
-      {/* Registration CTA */}
-      <div className="text-center">
-        <p className="font-body-sm text-on-surface-variant">
-          Não tem uma conta?{" "}
-          <Link
-            href="/register"
-            className="font-label-md font-semibold text-primary transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Criar conta
-          </Link>
-        </p>
-      </div>
+      {/* Info: provisioned users only */}
+      <p className="mt-sm text-center font-body-sm text-on-surface-variant">
+        Acesso restrito a usuários cadastrados pelo administrador.
+      </p>
     </div>
   );
 }
