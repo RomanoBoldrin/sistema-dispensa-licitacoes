@@ -1,3 +1,12 @@
+/**
+ * User creation API route.
+ *
+ * Validates and normalizes the user data, hashes the password, and creates
+ * a new user in the database. Only the supported access levels are accepted,
+ * and database errors caused by duplicated unique fields are returned as
+ * validation errors.
+ */
+
 import { createRouter } from "next-connect";
 
 import controller from "@/infra/controller";
@@ -49,7 +58,7 @@ async function postHandler(request, response) {
         name: normalizedName,
         email: normalizedEmail,
         passwordHash,
-        role,
+        role: "SOLICITANTE",
       },
       select: {
         id: true,

@@ -1,3 +1,13 @@
+/**
+ * Authentication API route.
+ *
+ * Handles user login and logout by creating and invalidating server-side
+ * sessions. Login validates credentials, checks whether the user is active,
+ * creates a session, and sets the session cookie. Logout validates and
+ * expires
+ * the current session and clears the session cookie.
+ */
+
 import { createRouter } from "next-connect";
 
 import authentication from "@/infra/authentication.js";

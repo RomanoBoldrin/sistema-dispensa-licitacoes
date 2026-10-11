@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useState } from "react";
 
 // ─────────────────────────────────────────────
@@ -511,10 +512,87 @@ function ChartCard({ title, data, defaultType = "donut" }) {
 }
 
 // ─────────────────────────────────────────────
+// Logout button
+// ─────────────────────────────────────────────
+
+function LogoutButton() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+
+    try {
+      await fetch("/api/v1/auth/sessions", { method: "DELETE" });
+    } finally {
+      router.push("/login");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleLogout}
+      disabled={isLoading}
+      aria-busy={isLoading}
+      className="flex items-center gap-base rounded px-sm py-xs font-label-md text-on-surface-variant transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <span
+        aria-hidden="true"
+        className={`material-symbols-outlined text-lg${isLoading ? " animate-spin" : ""}`}
+      >
+        {isLoading ? "progress_activity" : "logout"}
+      </span>
+      Sair
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Página do Dashboard
 // ─────────────────────────────────────────────
 
-export default function DashboardPage() {
+export async function getServerSideProps(context) {
+  const { req } = context;
+
+  const cookieHeader = req.headers.cookie ?? "";
+
+  try {
+    const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+    const host = req.headers.host;
+
+    const response = await fetch(`${protocol}://${host}/api/v1/user`, {
+      headers: {
+        cookie: cookieHeader,
+      },
+    });
+
+    if (!response.ok) {
+      return {
+        redirect: {
+          destination: "/login",
+          permanent: false,
+        },
+      };
+    }
+
+    const user = await response.json();
+
+    return {
+      props: { user },
+    };
+  } catch {
+    return {
+      redirect: {
+        destination: "/login",
+        permanent: false,
+      },
+    };
+  }
+}
+
+export default function DashboardPage({ user }) {
   return (
     <>
       <Head>
@@ -543,18 +621,14 @@ export default function DashboardPage() {
               </span>
             </div>
 
-            <Link
-              href="/"
-              className="flex items-center gap-base rounded px-sm py-xs font-label-md text-on-surface-variant transition-colors hover:text-primary"
-            >
-              <span
-                aria-hidden="true"
-                className="material-symbols-outlined text-lg"
-              >
-                logout
-              </span>
-              Sair
-            </Link>
+            <div className="flex items-center gap-sm">
+              {user?.name && (
+                <span className="hidden font-label-sm text-on-surface-variant sm:inline">
+                  {user.name}
+                </span>
+              )}
+              <LogoutButton />
+            </div>
           </div>
         </header>
 
