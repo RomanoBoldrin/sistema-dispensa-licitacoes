@@ -37,13 +37,6 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-xs">
-          <button
-            type="button"
-            className="rounded border border-primary px-sm py-xs font-label-md text-primary transition-colors hover:bg-secondary-container/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Criar conta
-          </button>
-
           <Link
             href="/login"
             className="flex items-center gap-base rounded bg-primary-container px-sm py-xs font-label-md text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

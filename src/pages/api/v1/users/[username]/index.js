@@ -1,3 +1,12 @@
+/**
+ * User retrieval and update API route.
+ *
+ * Retrieves a user's public information by username and allows partial
+ * updates to the user's username, email, and password. Passwords are
+ * hashed before being stored, and unique-field conflicts are handled
+ * as validation errors.
+ */
+
 import { createRouter } from "next-connect";
 
 import controller from "@/infra/controller";

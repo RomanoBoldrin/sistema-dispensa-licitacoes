@@ -1,3 +1,11 @@
+/**
+ * Authenticated user API route.
+ *
+ * Retrieves the user associated with the current valid session and renews
+ * the session to keep it active. The renewed session cookie is sent back
+ * to the client, and the authenticated user's information is returned.
+ */
+
 import { createRouter } from "next-connect";
 
 import authentication from "@/infra/authentication";
