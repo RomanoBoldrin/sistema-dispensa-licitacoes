@@ -27,8 +27,10 @@
     "db:seed:admin:dev": "dotenv -e .env.development -- npm run db:seed:admin",
     "db:seed:admin:test": "dotenv -e .env.test -- npm run db:seed:admin",
     "db:seed:admin:prod": "dotenv -e .env.production -- npm run db:seed:admin",
-    "docker:dev:up": "docker compose --env-file .env.development -f src/infra/compose.yaml up",
-    "docker:test:up": "docker compose --env-file .env.test -f src/infra/compose.yaml up"
+    "docker:dev:up": "docker compose  -f src/infra/compose.yaml up",
+    "docker:test:up": "docker compose  -f src/infra/compose.yaml up",
+    "docker:dev:down": "docker compose  -f src/infra/compose.yaml down",
+    "docker:test:down": "docker compose  -f src/infra/compose.yaml down"
   },
   "dependencies": {
     "@faker-js/faker": "10.6.0",
