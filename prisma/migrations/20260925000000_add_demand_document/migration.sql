@@ -18,7 +18,7 @@ ALTER TYPE "AuditAction" ADD VALUE 'DEMAND_DOCUMENT_UPDATED';
 -- CreateTable: DemandDocument
 CREATE TABLE "DemandDocument" (
     "id" TEXT NOT NULL,
-    "processId" TEXT NOT NULL,
+    "processId" UUID NOT NULL,
     "category" "ObjectCategory" NOT NULL,
     "detailedJustification" TEXT NOT NULL,
     "technicalSpecifications" TEXT,
