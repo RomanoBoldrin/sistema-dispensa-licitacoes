@@ -4,15 +4,36 @@ import retry from "async-retry";
 
 import webserver from "../../infra/webserver.mjs";
 
-// const emailHttpUrl = `http://${process.env.EMAIL_HTTP_HOST}:${process.env.EMAIL_HTTP_PORT}`;
+const emailHttpUrl = `http://${process.env.EMAIL_HTTP_HOST}:${process.env.EMAIL_HTTP_PORT}`;
+
+async function deleteAllEmails() {
+  await fetch(`${emailHttpUrl}/messages`, {
+    method: "DELETE",
+  });
+}
+
+async function getLastEmail() {
+  const emailListResponse = await fetch(`${emailHttpUrl}/messages`);
+  const emailListBody = await emailListResponse.json();
+  const lastEmailItem = emailListBody.pop();
+
+  const emailTextResponse = await fetch(
+    `${emailHttpUrl}/messages/${lastEmailItem.id}.plain`,
+  );
+  const emailTextBody = await emailTextResponse.text();
+
+  lastEmailItem.text = emailTextBody;
+  return lastEmailItem;
+}
 
 async function waitForAllServices() {
   await waitForWebServer();
+  await waitForEmailServer();
   // await waitForEmailServer();
 
   async function waitForWebServer() {
-    const messageWaiting = "Waiting for services.";
-    const messageReady = "Services ready!";
+    const messageWaiting = "Waiting for Web services.";
+    const messageReady = "Web Services ready!\n";
 
     const startedAt = Date.now();
 
@@ -38,6 +59,44 @@ async function waitForAllServices() {
       process.stdout.write(`\r🟡 ${messageWaiting} ${showSpinner()}`);
 
       const response = await fetch(`${webserver.origin}/api/v1/status`);
+
+      if (response.status !== 200) {
+        throw new Error("Web server is not ready yet.");
+      }
+
+      process.stdout.write(`\r⚫ ${messageWaiting} - ${showElapsedTime()}`);
+      process.stdout.write(`\n🟢 ${messageReady}\n`);
+    }
+  }
+
+  async function waitForEmailServer() {
+    const messageWaiting = "Waiting for Email services.";
+    const messageReady = "Email services ready!\n";
+
+    const startedAt = Date.now();
+
+    function showElapsedTime() {
+      return `${((Date.now() - startedAt) / 1000).toFixed(2)}s`;
+    }
+
+    function showSpinner() {
+      const intervalToUpdateMs = 50;
+      const spinner = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
+      const index =
+        Math.floor(Date.now() / intervalToUpdateMs) % spinner.length;
+
+      return `${showElapsedTime()} ${spinner[index]}`;
+    }
+
+    return retry(fetchEmailPage, {
+      retries: 100,
+      maxTimeout: 1000,
+    });
+
+    async function fetchEmailPage() {
+      process.stdout.write(`\r🟡 ${messageWaiting} ${showSpinner()}`);
+
+      const response = await fetch(emailHttpUrl);
 
       if (response.status !== 200) {
         throw new Error("Web server is not ready yet.");
@@ -99,6 +158,8 @@ function assertSafeEnvironment() {
 }
 
 const orchestrator = {
+  deleteAllEmails,
+  getLastEmail,
   waitForAllServices,
   clearDatabase,
 };
