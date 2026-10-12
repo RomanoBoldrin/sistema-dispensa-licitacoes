@@ -10,3 +10,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  mailcatcher:
+    container_name: "mailcatcher-dev"
+    image: "sj26/mailcatcher"
+    ports:
+      - "1025:1025"
+      - "1080:1080"
