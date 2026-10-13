@@ -1,64 +1,97 @@
-/**
- * User creation API route.
- *
- * Validates and normalizes the user data, hashes the password, and creates
- * a new user in the database. Only the supported access levels are accepted,
- * and database errors caused by duplicated unique fields are returned as
- * validation errors.
- */
-
 import { createRouter } from "next-connect";
 
+import authentication from "@/infra/authentication";
 import controller from "@/infra/controller";
+import { ForbiddenError } from "@/infra/errors";
 import { ValidationError } from "@/infra/errors";
 import password from "@/infra/password";
 import { prisma } from "@/infra/prisma.js";
 
 const router = createRouter();
 
+const ASSIGNABLE_ROLES = ["SOLICITANTE", "AGENTE_CONTRATACAO", "APROVADOR"];
+
 router.post(postHandler);
 
 export default router.handler(controller.errorHandlers);
 
 async function postHandler(request, response) {
-  const { name, email, password: rawPassword, role } = request.body;
+  // 1. Authenticate and authorize the requester.
+  const { user: currentUser } =
+    await authentication.getAuthenticatedUserFromRequest(request);
 
-  if (!name || !email || !rawPassword || !role) {
-    const publicErrorObject = new ValidationError();
+  if (currentUser.role !== "ADMIN") {
+    throw new ForbiddenError({
+      message: "You are not allowed to create users.",
+      action: "Contact an administrator if you need access.",
+    });
+  }
 
-    return response.status(publicErrorObject.statusCode).json({
+  // 2. Validate the request body.
+  const body = request.body;
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return response.status(400).json({
       name: "ValidationError",
-      message: "Missing required fields.",
-      action: "Send name, email, password and role.",
+      message: "Invalid request body.",
+      action: "Send a JSON object with the required fields.",
       status_code: 400,
     });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedName = name.trim();
+  const { name, email, password: rawPassword, role } = body;
 
   if (
-    !["ADMIN", "SOLICITANTE", "AGENTE_CONTRATACAO", "APROVADOR"].includes(role)
+    typeof name !== "string" ||
+    typeof email !== "string" ||
+    typeof rawPassword !== "string" ||
+    typeof role !== "string"
   ) {
-    const publicErrorObject = new ValidationError();
-
-    return response.status(publicErrorObject.statusCode).json({
+    return response.status(400).json({
       name: "ValidationError",
-      message: "Invalid access level.",
-      action: "Use a valid user role.",
+      message: "Invalid or missing fields.",
+      action: "Send name, email, password and role as strings.",
       status_code: 400,
     });
   }
 
+  const normalizedName = name.trim();
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedName || !normalizedEmail || !rawPassword) {
+    return response.status(400).json({
+      name: "ValidationError",
+      message: "Required fields cannot be empty.",
+      action: "Provide a name, email, password and role.",
+      status_code: 400,
+    });
+  }
+
+  if (!ASSIGNABLE_ROLES.includes(role)) {
+    throw new ValidationError({
+      message: "Invalid or unauthorized access level.",
+      action: "Choose an assignable user role.",
+    });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new ValidationError({
+      message: "Invalid email address.",
+      action: "Provide a valid email address.",
+    });
+  }
+
+  // 3. Hash the password.
   const passwordHash = await password.hash(rawPassword);
 
+  // 4. Create the user.
   try {
     const createdUser = await prisma.user.create({
       data: {
         name: normalizedName,
         email: normalizedEmail,
         passwordHash,
-        role: "SOLICITANTE",
+        role,
       },
       select: {
         id: true,
@@ -82,13 +115,11 @@ async function postHandler(request, response) {
     });
   } catch (error) {
     if (error.code === "P2002") {
-      const duplicatedField = error.meta?.target?.[0];
-
-      return response.status(400).json({
-        name: "ValidationError",
-        message: `The ${duplicatedField || "field"} informed is already being used.`,
-        action: "Use another value to perform this operation.",
-        status_code: 400,
+      return response.status(409).json({
+        name: "ConflictError",
+        message: "An account with this email already exists.",
+        action: "Use a different email address.",
+        status_code: 409,
       });
     }
 
