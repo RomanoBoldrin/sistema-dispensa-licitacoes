@@ -1,3 +1,22 @@
+/**
+
+* Demand Formalization Wizard
+*
+* In Brazilian public procurement, a Documento de Formalização da Demanda
+* (DFD) is used to formalize the organization's need for a potential
+* procurement.
+*
+* This component provides a step-by-step form for collecting the information
+* needed to describe and justify that demand, including its object,
+* classification, urgency, technical requirements, and responsible person.
+*
+* The wizard currently handles client-side form state and validation.
+* Submission is simulated; persistence through a backend API has not yet
+* been implemented.
+*
+* @see docs/DOMAIN_GLOSSARY.md
+  */
+
 import Link from "next/link";
 import { useState } from "react";
 

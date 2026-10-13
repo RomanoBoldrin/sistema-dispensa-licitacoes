@@ -1,17 +1,15 @@
 import bcryptjs from "bcryptjs";
 
-async function hash(password) {
-  const rounds = getNumberOfRounds();
-
-  return await bcryptjs.hash(password, rounds);
+function hash(password) {
+  return bcryptjs.hash(password, getNumberOfRounds());
 }
 
 function getNumberOfRounds() {
   return Number(process.env.BCRYPT_ROUNDS || 14);
 }
 
-async function compare(providedPassword, storedPassword) {
-  return await bcryptjs.compare(providedPassword, storedPassword);
+function compare(providedPassword, storedPassword) {
+  return bcryptjs.compare(providedPassword, storedPassword);
 }
 
 const password = {
