@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import DFDWizard from "@/components/dfd/DFDWizard";
+import DFDWizard from "@/components/demand-formalization/DemandFormalizationWizard.jsx.jsx";
 
 export default function NewProcessPage() {
   return (
