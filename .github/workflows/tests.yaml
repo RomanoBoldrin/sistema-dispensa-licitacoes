@@ -25,16 +25,26 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      mailcatcher:
+        image: sj26/mailcatcher
+        ports:
+          - "1025:1025"
+          - "1080:1080"
+
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
       BCRYPT_ROUNDS: 1
+      EMAIL_SMTP_HOST: localhost
+      EMAIL_SMTP_PORT: 1025
+      EMAIL_HTTP_HOST: localhost
+      EMAIL_HTTP_PORT: 1080
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: package.json
 
       - run: npm ci
 
