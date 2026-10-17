@@ -24,7 +24,8 @@ const VALID_URGENCY_LEVELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
 async function postHandler(request, response) {
   // 1. Authenticate the user
-  const { user } = await authentication.getAuthenticatedUserFromRequest(request);
+  const { user } =
+    await authentication.getAuthenticatedUserFromRequest(request);
 
   // 2. Validate request body
   const body = request.body;
@@ -90,7 +91,10 @@ async function postHandler(request, response) {
     });
   }
 
-  if (typeof responsibleName !== "string" || responsibleName.trim().length === 0) {
+  if (
+    typeof responsibleName !== "string" ||
+    responsibleName.trim().length === 0
+  ) {
     throw new ValidationError({
       message: "Responsible name is required.",
       action: "Provide the name of the responsible person.",

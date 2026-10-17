@@ -649,7 +649,9 @@ export default function DFDWizard() {
       setIsSubmitted(true);
     } catch (error) {
       setErrors({
-        _general: error.message || "Erro ao enviar o DFD. Tente novamente em instantes.",
+        _general:
+          error.message ||
+          "Erro ao enviar o DFD. Tente novamente em instantes.",
       });
     } finally {
       setIsSubmitting(false);
