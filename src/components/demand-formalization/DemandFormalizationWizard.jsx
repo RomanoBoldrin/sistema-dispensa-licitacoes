@@ -635,14 +635,21 @@ export default function DFDWizard() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Replace with actual API call
-      // await fetch("/api/v1/processes", { method: "POST", body: JSON.stringify(formData) })
-      console.log("DFD submitted:", formData);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await fetch("/api/v1/processes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao enviar o DFD.");
+      }
+
       setIsSubmitted(true);
-    } catch {
+    } catch (error) {
       setErrors({
-        _general: "Erro ao enviar o DFD. Tente novamente em instantes.",
+        _general: error.message || "Erro ao enviar o DFD. Tente novamente em instantes.",
       });
     } finally {
       setIsSubmitting(false);
