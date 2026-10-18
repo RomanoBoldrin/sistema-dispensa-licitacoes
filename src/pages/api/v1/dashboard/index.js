@@ -151,8 +151,10 @@ async function getHandler(request, response) {
       id: true,
       name: true,
       _count: {
-        processes: {
-          where,
+        select: {
+          processes: {
+            where,
+          },
         },
       },
     },
