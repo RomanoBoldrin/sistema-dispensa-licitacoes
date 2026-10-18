@@ -42,6 +42,8 @@ async function postHandler(request, response) {
     });
   }
 
+  // TODO: It's important that we reinforce more password requirements,
+  // though it's ok to have just the password lenght for this protoype.
   if (!password || password.length < 8) {
     throw new ValidationError({
       message: "A senha deve ter pelo menos 8 caracteres.",

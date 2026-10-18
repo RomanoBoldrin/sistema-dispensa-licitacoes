@@ -652,7 +652,7 @@ export default function DFDWizard() {
   if (isSubmitted) {
     return (
       <div className="flex flex-col items-center py-xl text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
           <span className="material-symbols-outlined text-4xl text-primary">
             check_circle
           </span>

@@ -32,8 +32,9 @@ function onErrorHandler(error, request, response) {
   response.status(500).json(publicErrorObject);
 }
 
+// TODO: check for possible erros in this REGEX pattern.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const TOKEN_TTL_MS = 1000 * 60 * 60; // 1 hora
+const TOKEN_TTL_MS = 1000 * 60 * 60; // 1 hour token
 
 async function postHandler(request, response) {
   const { email } = request.body || {};
@@ -55,8 +56,8 @@ async function postHandler(request, response) {
       "Se este e-mail estiver cadastrado, enviaremos instruções para redefinir a senha.",
   };
 
-  // Resposta idêntica mesmo se o e-mail não existir, para não revelar quais
-  // e-mails estão cadastrados no sistema.
+  // Identical answer even if the e-mail does not exist in order to not reveal
+  // which e-mails are registred in the system
   if (!user) {
     return response.status(200).json(genericResponse);
   }
@@ -70,14 +71,14 @@ async function postHandler(request, response) {
 
   const resetLink = `/reset-password?token=${token}`;
 
-  // TODO: este projeto ainda não tem um serviço de e-mail configurado.
-  // Em produção, envie `resetLink` por e-mail em vez de retorná-lo na resposta.
+  // TODO: this project still don't have an e-mail service configured.
+  // On production, send `resetLink` via e-mail instead of returning it in the response.
   console.log(
     `[forgot-password] Link de redefinição para ${user.email}: ${resetLink}`,
   );
 
   return response.status(200).json({
     ...genericResponse,
-    resetLink, // ⚠️ apenas para desenvolvimento — remova quando integrar um serviço de e-mail
+    resetLink, // ⚠️ Only for development phase - remove after configuring an e-mail service.
   });
 }
