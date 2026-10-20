@@ -1,0 +1,4 @@
+ALTER TABLE "Process" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Document" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Approval" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "AuditLog" ADD COLUMN "deletedAt" TIMESTAMP(3);
