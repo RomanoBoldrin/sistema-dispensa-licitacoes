@@ -554,7 +554,7 @@ export default function DFDWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedProcess, setSubmittedProcess] = useState(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -633,23 +633,65 @@ export default function DFDWizard() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setErrors({});
 
     try {
-      // TODO: Replace with actual API call
-      // await fetch("/api/v1/processes", { method: "POST", body: JSON.stringify(formData) })
-      console.log("DFD submitted:", formData);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsSubmitted(true);
-    } catch {
+      const payload = {
+        title: formData.title.trim(),
+        object: formData.object.trim(),
+        category: formData.category,
+        detailedJustification: formData.detailedJustification.trim(),
+        urgency: formData.urgency,
+        responsibleName: formData.responsibleName.trim(),
+      };
+
+      if (formData.technicalSpecifications.trim()) {
+        payload.technicalSpecifications =
+          formData.technicalSpecifications.trim();
+      }
+
+      if (formData.responsibleEmail.trim()) {
+        payload.responsibleEmail = formData.responsibleEmail.trim();
+      }
+
+      if (formData.budgetSource.trim()) {
+        payload.budgetSource = formData.budgetSource.trim();
+      }
+
+      if (
+        formData.desiredDeadlineDays !== "" &&
+        formData.desiredDeadlineDays !== null &&
+        formData.desiredDeadlineDays !== undefined
+      ) {
+        payload.desiredDeadlineDays = Number(formData.desiredDeadlineDays);
+      }
+
+      const response = await fetch("/api/v1/processes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || "Erro ao enviar o DFD.");
+      }
+
+      setSubmittedProcess(responseData);
+    } catch (err) {
       setErrors({
-        _general: "Erro ao enviar o DFD. Tente novamente em instantes.",
+        _general:
+          err.message || "Erro ao enviar o DFD. Tente novamente em instantes.",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isSubmitted) {
+  if (submittedProcess) {
     return (
       <div className="flex flex-col items-center py-xl text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -661,21 +703,25 @@ export default function DFDWizard() {
           DFD enviado com sucesso!
         </h2>
         <p className="mt-xs max-w-md font-body-md text-on-surface-variant">
-          Seu Documento de Formalização da Demanda foi registrado e será
-          analisado pelo setor de contratações. Você será notificado sobre o
-          andamento.
+          Seu Documento de Formalização da Demanda foi registrado sob o processo{" "}
+          <strong className="text-on-surface">
+            #{String(submittedProcess.number).padStart(3, "0")}/
+            {submittedProcess.year}
+          </strong>{" "}
+          e será analisado pelo setor de contratações.
         </p>
         <div className="mt-lg flex gap-sm">
           <Link
             href="/dashboard"
             className="flex items-center gap-xs rounded-lg border border-outline-variant px-sm py-2 font-label-md text-on-surface transition-colors hover:bg-surface-container"
-          ></Link>
-          <span className="material-symbols-outlined text-lg">dashboard</span>
-          Ir para o painel
+          >
+            <span className="material-symbols-outlined text-lg">dashboard</span>
+            Ir para o painel
+          </Link>
           <button
             type="button"
             onClick={() => {
-              setIsSubmitted(false);
+              setSubmittedProcess(null);
               setCurrentStep(0);
               setFormData({
                 title: "",

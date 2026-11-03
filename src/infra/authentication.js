@@ -83,6 +83,7 @@ async function getAuthenticatedUserFromRequest(request) {
       email: true,
       role: true,
       isActive: true,
+      departmentId: true,
     },
   });
 
