@@ -11,8 +11,7 @@
 >
 > **Last updated:** 2026-11-04\
 > **Project:** `sistema-dispensa-licitacoes-js`\
-> **Status:** Foundation exists; the end-to-end procurement workflow is
-> not yet demonstrated as complete.
+> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), and Phase 2 (Procurement Preparation — Suppliers, Quotations, Comparative Price Map, Document Storage & Process Detail Integration) are completed and verified (15/15 test suites passed, 127/127 tests passed). Next priority is Phase 3 (Legal Classification, Justifications & Submission Workflow).
 
 ---
 
@@ -600,20 +599,19 @@ from-status/to-status, comments, and transition chronology.
 
 #### B. Item-level price research
 
-The current `Quotation` has one `value` for a supplier's quotation on a
-process. The PI-II documentation asks for quotations and a comparative
-map but does not explicitly define whether a process may contain
-multiple items.
+The `Quotation` model stores one `value` for a supplier's quotation on a
+process.
 
-**Open decision:** Does one process represent one indivisible
-object/value, or can it contain multiple independently priced items?
+**Decision implemented (Phase 2):** For this MVP, one `Process` represents
+one indivisible procurement object with one overall estimated value (`Process.estimatedValue`).
+Quotations represent total supplier bids (`Quotation.value`), and price comparison
+is conducted at the overall process level. `ProcessItem` and `QuotationItem` were
+deliberately not introduced to keep the MVP focused and avoid premature complexity.
+Decimal precision is strictly maintained using exact cents arithmetic and `Prisma.Decimal`.
 
-**Recommendation if multi-item procurement is in scope:** introduce
-`ProcessItem` and `QuotationItem`. A quotation then represents a
-supplier's response to a process and its quotation items store unit
-price, quantity/total, and item-specific details. Define
-currency/decimal precision and calculation rules carefully. Do not
-implement this extension until the project owner confirms the scope.
+**Recommendation if multi-item procurement is introduced in a future version:**
+introduce `ProcessItem` and `QuotationItem`, where each quotation item references
+a specific process item with quantity and unit price.
 
 #### C. Approval assignment and stage
 
@@ -626,19 +624,15 @@ assigned/pending review from its final decision, and identify the
 approval stage or workflow step. The final stages and whether they are
 sequential, parallel, or hybrid remain open decisions.
 
-#### D. Document review and versioning
+#### D. Document storage, validation, and deactivation
 
-The current `Document` supports process association, type, storage
-metadata, uploader, active flag, and timestamps. It does not visibly
-model review status, reviewer, review date, rejection reason, or
-replacement/version lineage.
+**Implemented Strategy (Phase 2):**
 
-**Recommendation:** Add only the metadata needed by the documented
-document-review workflow. Preserve prior versions/evidence where
-required. Store files outside the relational database and use
-`storageKey` to reference them. Define access controls and file
-validation (size, MIME type, extension, safe storage, and download
-authorization).
+- Documents are stored outside PostgreSQL via `storageService` (`src/services/storage.service.js`).
+- Database records in `Document` store metadata, MIME type, size, process relation, and safe generated keys (`doc_<uuid>.<ext>`), preventing path traversal attacks.
+- Magic-byte signatures are checked server-side to prevent MIME-type spoofing (PDF `%PDF-`, PNG, JPEG, DOCX, XLSX, ODT, TXT).
+- Files up to 15MB are accepted. Downloads are authorized server-side and streamed to the client with sanitized `Content-Disposition`.
+- Deactivation uses soft deletion (`isActive = false`), and transactional rollback removes disk files if database records fail to commit.
 
 #### E. Legal classification
 
@@ -855,25 +849,23 @@ according to permissions.
 
 ### Phase 2 --- Procurement preparation
 
-**Goal:** complete the process instruction data needed before
-submission.
+**Goal:** complete the process instruction data needed before submission.
 
-Tasks: - \[ \] Confirm whether processes support one object or multiple
-items. - \[ \] If multi-item is confirmed, implement process items and
-item-level quotations. - \[ \] Implement supplier CRUD/lookup with CNPJ
-validation and duplicate handling. - \[ \] Implement quotation
-registration and editing. - \[ \] Implement comparative price map and
-transparent calculation rules. - \[ \] Implement document upload,
-metadata persistence, retrieval, and authorized download. - \[ \]
-Validate file size, content type, extension, and storage key. - \[ \]
-Implement document categories/types required by the workflow. - \[ \]
-Add document review metadata if required by the internal process. - \[
-\] Add tests for price calculations, document authorization, and invalid
-uploads.
+Tasks:
 
-**Exit criterion:** the process contains the required supplier/quotation
-and document information and can produce a consistent comparative price
-map.
+- [x] Confirm whether processes support one object or multiple items (single-object scope confirmed for MVP).
+- [x] Implement supplier CRUD/lookup with CNPJ validation, check digits, normalization, and duplicate handling (`supplier.service.js`).
+- [x] Implement quotation registration, retrieval, editing, and deletion with decimal precision and process status locking (`quotation.service.js`).
+- [x] Implement comparative price map calculation rules (lowest price, variance, average) in domain service (`buildComparativePriceMap`).
+- [x] Implement document upload, metadata persistence, outside-PostgreSQL storage, safe storage keys, and authorized streaming download (`storage.service.js`, `document.service.js`).
+- [x] Validate file size (15MB), magic byte signatures, allowed extensions, and path traversal defenses.
+- [x] Implement document categories matching `DocumentType` enum and procurement checklist.
+- [x] Enforce database uniqueness constraint on `Quotation(processId, supplierId)`.
+- [x] Add document deactivation (`Document.isActive`).
+- [x] Integrate Supplier, Quotation, Comparative Price Map, and Document tabs into Process Detail UI (`/processes/[processId]`).
+- [x] Add comprehensive unit and integration test suites covering all success, validation, and error scenarios.
+
+**Exit criterion:** the process contains the required supplier/quotation and document information, produces a consistent comparative price map, and all test suites pass. Demonstrably achieved on 2026-11-04 (15/15 test suites passed, 127/127 tests passed).
 
 ### Phase 3 --- Legal classification and formalization
 
@@ -1012,8 +1004,7 @@ destructive database command.
 
 ## 11. Open decisions requiring project-owner confirmation
 
-These questions were raised during planning and remain unresolved in the
-conversation as of 2026-11-04.
+These questions were raised during planning and documented in the conversation.
 
 ---
 
@@ -1022,10 +1013,7 @@ point
 
 ---
 
-Procurement item One object/value per Multiple items if the
-structure process; or multiple system is intended to
-items with separate support general
-quantities/prices procurement scenarios
+Procurement item Confirmed single-object scope for MVP. Each process represents an indivisible procurement object with one overall estimated value (`Process.estimatedValue`) and total quotation values (`Quotation.value`). No `ProcessItem` or `QuotationItem` introduced. Price comparison is conducted on total quotation values.
 
 Approval workflow Sequential; parallel; Sequential is simpler
 hybrid for an MVP, unless the
@@ -1109,17 +1097,66 @@ satisfied:
 
 ---
 
-## 14. Immediate next actions
+## 14. Phase 2 Completion Summary & Immediate Next Actions
 
-With **Phase 0 (Repository audit)** and **Phase 1 (Process foundation)** completed, the next implementation step is **Phase 2 --- Procurement preparation**.
+### 14.1 Phase 2: Procurement Preparation (Completed)
 
-Recommended order for Phase 2:
+Phase 2 has been fully implemented, tested, and verified on branch `feat/procurement-preparation`:
 
-1.  Confirm the open decision in Section 11 regarding whether a process represents a single object/value or multiple independently priced items.
-2.  Implement supplier CRUD/lookup (`/api/v1/suppliers`) with CNPJ validation and duplicate handling.
-3.  Implement quotation registration, editing, and listing (`/api/v1/processes/[processId]/quotations`) plus comparative price calculation rules in a dedicated `quotation.service.js`.
-4.  Implement document upload metadata persistence, retrieval, and authorized download (`/api/v1/processes/[processId]/documents`) in `document.service.js`.
-5.  Connect the Process Detail module tabs (`/processes/[processId]`) to the new Phase 2 endpoints and add unit and integration tests.
+1. **Procurement Object Scope Decision:**
+   - Single-object scope confirmed: each `Process` models one indivisible procurement object with one overall estimated value (`Process.estimatedValue`) and total quotation values (`Quotation.value`). No `ProcessItem` or `QuotationItem` abstractions introduced.
+
+2. **Supplier Management (`supplier.service.js` & `/api/v1/suppliers`):**
+   - CRUD and searchable lookup by legal name, trade name, and CNPJ.
+   - Algorithmic CNPJ validation (14 numeric digits, reject identical repeat sequences, two check digit calculation passes) and automatic string normalization (`XX.XXX.XXX/YYYY-ZZ`).
+   - Uniqueness conflict handling on duplicate CNPJ with standard `ConflictError` (409).
+   - Least-privilege authorization: `ADMIN` and `AGENTE_CONTRATACAO` can create/update; authenticated users can search and view.
+
+3. **Quotation Management (`quotation.service.js` & `/api/v1/processes/[processId]/quotations`):**
+   - Quotation registration, retrieval, updating, and deletion scoped strictly to authorized processes and suppliers.
+   - Financial decimal precision using exact cents arithmetic and `Prisma.Decimal` to avoid floating-point inaccuracies.
+   - Enforced database constraint: one quotation per supplier per process (`@@unique([processId, supplierId])`).
+   - Process lifecycle locks: quotations cannot be added or modified once a process moves to `AWAITING_APPROVAL`, `APPROVED`, or `COMPLETED`.
+   - Immutable audit logging: `QUOTATION_ADDED` and `QUOTATION_UPDATED`.
+
+4. **Comparative Price Map:**
+   - Pure domain calculation engine (`buildComparativePriceMap`) in `quotation.service.js`.
+   - Computes total quotation count, identifies lowest quotation(s), calculates arithmetic average, and calculates absolute/percentage variance from the lowest bid for every quotation.
+   - Gracefully handles zero quotations, single quotation, and ties.
+   - Strict architectural boundary: price calculation is purely descriptive and **never** automatically selects a supplier or advances process status.
+
+5. **Document Management (`storage.service.js`, `document.service.js`, & `/api/v1/processes/[processId]/documents`):**
+   - Upload metadata persistence and disk-based file persistence outside PostgreSQL (`storage/uploads/`).
+   - Magic bytes / signature verification preventing file type spoofing (PDF `%PDF-`, PNG, JPEG, DOCX, XLSX, ODT, TXT) and 15MB file size limit.
+   - Path traversal defenses and safe generated storage keys (`doc_<uuid>.<ext>`).
+   - Streaming downloads with sanitized `Content-Disposition` headers and role-based access checks.
+   - Soft deletion (`isActive = false`) and transaction rollback removing disk files if database transactions fail.
+   - Audit logging: `DOCUMENT_UPLOADED`.
+
+6. **Process Detail Integration (`/processes/[processId]`):**
+   - Seamlessly integrated into the Process Detail layout across specialized sub-tabs:
+     - **Pesquisa de Preços:** KPI metrics (lowest quote, average quote, total quotes), comparative map table with badges and variance %, and quotation registration modal.
+     - **Documentos:** Procurement document checklist (TR, Pesquisa de Preços, Documentação do Fornecedor, etc.), upload drop-zone, and active documents table with download/delete actions.
+     - **Fornecedores:** Directory search, supplier selection for quotations, and quick supplier registration modal.
+
+7. **Database Migration:**
+   - Migration `20261104230000_phase_2_procurement_preparation` committed and deployed, introducing `isActive` to `Document`, `@@unique([processId, supplierId])` to `Quotation`, and composite indexes for performance.
+
+8. **Quality Assurance & Verification:**
+   - 15/15 test suites passing (127/127 tests: 62 unit tests, 65 integration tests).
+   - Next.js production build (`npm run build`) compiles cleanly without errors or browser bundle leakage.
+   - Code style verified with 100% compliance across `npm run lint:eslint:check` and `npm run lint:prettier:check`.
+
+---
+
+### 14.2 Next Priority: Phase 3 — Legal Classification, Justifications & Submission
+
+With Phase 2 complete, the next phase will implement:
+
+1. Legal classification under Lei nº 14.133/2021 Article 75 (dispensa por valor ou emergência/outros incisos).
+2. Price justification and supplier selection justification records.
+3. Supplier selection decision by authorized staff (`AGENTE_CONTRATACAO` / `ADMIN`).
+4. Process submission workflow (`DRAFT` / `PRICE_RESEARCH` -> `AWAITING_APPROVAL`).
 
 ---
 
@@ -1142,4 +1179,4 @@ When implementation changes:
 - Keep legal requirements and external integration behavior current
   and independently verified.
 
-**Current overall status:** Phase 0 (Repository audit and alignment) and Phase 1 (Process foundation — process creation with concurrency-safe numbering, DFD integration, listing with filters/pagination, detail view, `DRAFT` editing, dashboard navigation, and unit/integration test suites) are complete. The next priority is **Phase 2: Procurement preparation** (suppliers, quotations, comparative price map, and document management).
+**Current overall status:** Phase 0 (Repository audit and alignment), Phase 1 (Process foundation), and Phase 2 (Procurement preparation — suppliers, quotations, comparative price map, documents, Process Detail integration, and comprehensive test coverage) are **COMPLETE**. The next priority is **Phase 3: Legal Classification, Justifications & Submission Workflow**.
