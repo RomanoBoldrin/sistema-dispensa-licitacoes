@@ -69,17 +69,32 @@ export default function DashboardOverview({
           )}
 
           <Link
-            href="/processes/new"
-            className="inline-flex items-center gap-xs rounded-md bg-primary px-md py-2 font-label-md text-on-primary transition-colors hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            href="/processes"
+            className="inline-flex items-center gap-xs rounded-md border border-outline-variant bg-surface-container-lowest px-md py-2 font-label-md text-on-surface transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <span
               aria-hidden="true"
               className="material-symbols-outlined text-lg"
             >
-              add_circle
+              format_list_bulleted
             </span>
-            <span>Nova Dispensa</span>
+            <span>Processos</span>
           </Link>
+
+          {user?.role !== "APROVADOR" && (
+            <Link
+              href="/processes/new"
+              className="inline-flex items-center gap-xs rounded-md bg-primary px-md py-2 font-label-md text-on-primary transition-colors hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <span
+                aria-hidden="true"
+                className="material-symbols-outlined text-lg"
+              >
+                add_circle
+              </span>
+              <span>Nova Dispensa</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -140,6 +155,18 @@ export default function DashboardOverview({
               </p>
             </div>
           </div>
+          <Link
+            href="/processes"
+            className="inline-flex items-center gap-1 self-start sm:self-center rounded-md border border-tertiary/40 bg-surface-container-lowest px-sm py-1.5 font-label-sm text-on-surface transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <span>Revisar processos</span>
+            <span
+              aria-hidden="true"
+              className="material-symbols-outlined text-base"
+            >
+              arrow_forward
+            </span>
+          </Link>
         </div>
       )}
 

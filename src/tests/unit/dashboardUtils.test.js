@@ -2,11 +2,17 @@ import {
   STATUS_LABELS,
   STATUS_BADGE_STYLES,
   ROLE_LABELS,
+  CATEGORY_LABELS,
+  URGENCY_LABELS,
+  URGENCY_BADGE_STYLES,
+  AUDIT_ACTION_LABELS,
   LIFECYCLE_STAGES,
   formatCurrency,
   formatDate,
+  formatDateTime,
   formatProcessNumber,
 } from "@/components/dashboard/dashboardUtils";
+import processService from "@/services/process.service.js";
 
 describe("Dashboard Utilities", () => {
   describe("formatCurrency", () => {
@@ -92,6 +98,135 @@ describe("Dashboard Utilities", () => {
         expect(stage.description).toBeDefined();
         expect(stage.icon).toBeDefined();
       });
+    });
+
+    test("contains DFD category, urgency, and audit action labels", () => {
+      expect(CATEGORY_LABELS.IT_GOODS).toBeDefined();
+      expect(CATEGORY_LABELS.COMMON_GOODS).toBeDefined();
+      expect(CATEGORY_LABELS.GENERAL_SERVICES).toBeDefined();
+      expect(CATEGORY_LABELS.ENGINEERING_WORKS).toBeDefined();
+      expect(CATEGORY_LABELS.HEALTH_SUPPLIES).toBeDefined();
+      expect(CATEGORY_LABELS.OTHER).toBeDefined();
+
+      expect(URGENCY_LABELS.LOW).toBeDefined();
+      expect(URGENCY_LABELS.MEDIUM).toBeDefined();
+      expect(URGENCY_LABELS.HIGH).toBeDefined();
+      expect(URGENCY_LABELS.CRITICAL).toBeDefined();
+      expect(URGENCY_BADGE_STYLES.HIGH).toBeDefined();
+
+      expect(AUDIT_ACTION_LABELS.PROCESS_CREATED).toBeDefined();
+      expect(AUDIT_ACTION_LABELS.PROCESS_UPDATED).toBeDefined();
+      expect(AUDIT_ACTION_LABELS.DEMAND_DOCUMENT_CREATED).toBeDefined();
+      expect(AUDIT_ACTION_LABELS.DEMAND_DOCUMENT_UPDATED).toBeDefined();
+    });
+  });
+
+  describe("formatDateTime", () => {
+    test("formats ISO date-time string to pt-BR format", () => {
+      const result = formatDateTime("2026-10-12T15:30:00.000Z");
+      expect(result).toMatch(/\d{2}\/\d{2}\/2026/);
+    });
+
+    test("handles invalid values gracefully", () => {
+      expect(formatDateTime(null)).toBe("—");
+      expect(formatDateTime("not-a-date")).toBe("—");
+    });
+  });
+
+  describe("processService authorization helpers", () => {
+    const sampleProcess = {
+      id: "11111111-1111-4111-8111-111111111111",
+      status: "DRAFT",
+      requesterId: "22222222-2222-4222-8222-222222222222",
+      departmentId: "33333333-3333-4333-8333-333333333333",
+    };
+
+    test("isValidUuid validates UUID v1-v5 format", () => {
+      expect(
+        processService.isValidUuid("11111111-1111-4111-8111-111111111111"),
+      ).toBe(true);
+      expect(processService.isValidUuid("invalid-uuid")).toBe(false);
+    });
+
+    test("canUserAccessProcess enforces SOLICITANTE scoping and allows staff roles", () => {
+      expect(
+        processService.canUserAccessProcess(
+          {
+            id: sampleProcess.requesterId,
+            role: "SOLICITANTE",
+            departmentId: sampleProcess.departmentId,
+          },
+          sampleProcess,
+        ),
+      ).toBe(true);
+
+      expect(
+        processService.canUserAccessProcess(
+          {
+            id: "other-user",
+            role: "SOLICITANTE",
+            departmentId: sampleProcess.departmentId,
+          },
+          sampleProcess,
+        ),
+      ).toBe(false);
+
+      expect(
+        processService.canUserAccessProcess(
+          {
+            id: "aprovador-id",
+            role: "APROVADOR",
+            departmentId: "other-dept",
+          },
+          sampleProcess,
+        ),
+      ).toBe(true);
+    });
+
+    test("canUserEditProcess enforces role, ownership, and status", () => {
+      expect(
+        processService.canUserEditProcess(
+          {
+            id: sampleProcess.requesterId,
+            role: "SOLICITANTE",
+            departmentId: sampleProcess.departmentId,
+          },
+          sampleProcess,
+        ),
+      ).toBe(true);
+
+      expect(
+        processService.canUserEditProcess(
+          {
+            id: "other-user",
+            role: "SOLICITANTE",
+            departmentId: sampleProcess.departmentId,
+          },
+          sampleProcess,
+        ),
+      ).toBe(false);
+
+      expect(
+        processService.canUserEditProcess(
+          {
+            id: "aprovador-id",
+            role: "APROVADOR",
+            departmentId: sampleProcess.departmentId,
+          },
+          sampleProcess,
+        ),
+      ).toBe(false);
+
+      expect(
+        processService.canUserEditProcess(
+          {
+            id: "admin-id",
+            role: "ADMIN",
+            departmentId: "other-dept",
+          },
+          sampleProcess,
+        ),
+      ).toBe(true);
     });
   });
 });

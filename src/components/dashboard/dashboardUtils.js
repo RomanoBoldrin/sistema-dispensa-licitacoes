@@ -37,6 +37,46 @@ export const ROLE_LABELS = {
   APROVADOR: "Aprovador",
 };
 
+export const CATEGORY_LABELS = {
+  IT_GOODS: "Bens de TI",
+  COMMON_GOODS: "Materiais Comuns",
+  GENERAL_SERVICES: "Serviços Gerais",
+  ENGINEERING_WORKS: "Obras de Engenharia",
+  HEALTH_SUPPLIES: "Insumos de Saúde",
+  OTHER: "Outros",
+};
+
+export const URGENCY_LABELS = {
+  LOW: "Baixa",
+  MEDIUM: "Média",
+  HIGH: "Alta",
+  CRITICAL: "Crítica",
+};
+
+export const URGENCY_BADGE_STYLES = {
+  LOW: "bg-secondary-container text-on-secondary-container border-secondary/20",
+  MEDIUM:
+    "bg-surface-container-high text-on-surface-variant border-outline-variant/60",
+  HIGH: "bg-tertiary-fixed text-on-tertiary-fixed-variant border-tertiary/30",
+  CRITICAL: "bg-error-container text-on-error-container border-error/30",
+};
+
+export const AUDIT_ACTION_LABELS = {
+  PROCESS_CREATED: "Processo criado",
+  PROCESS_UPDATED: "Processo atualizado",
+  PROCESS_SUBMITTED: "Processo submetido para análise",
+  DEMAND_DOCUMENT_CREATED: "DFD registrado",
+  DEMAND_DOCUMENT_UPDATED: "DFD atualizado",
+  QUOTATION_ADDED: "Cotação adicionada",
+  QUOTATION_UPDATED: "Cotação atualizada",
+  SUPPLIER_SELECTED: "Fornecedor selecionado",
+  DOCUMENT_UPLOADED: "Documento anexado",
+  PROCESS_SENT_FOR_APPROVAL: "Enviado para aprovação",
+  PROCESS_APPROVED: "Processo aprovado",
+  PROCESS_REJECTED: "Processo rejeitado",
+  PROCESS_COMPLETED: "Processo concluído",
+};
+
 export const LIFECYCLE_STAGES = [
   {
     step: 1,
@@ -121,6 +161,23 @@ export function formatDate(dateString) {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+    }).format(date);
+  } catch {
+    return "—";
+  }
+}
+
+export function formatDateTime(dateString) {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   } catch {
     return "—";
