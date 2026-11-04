@@ -40,23 +40,43 @@ export default function RecentProcessesTable({ processes = [] }) {
           </p>
         </div>
 
-        <Link
-          href="/processes/new"
-          className="inline-flex items-center gap-1 rounded-md border border-outline-variant bg-surface-container-low px-sm py-1.5 font-label-sm text-on-surface transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <span
-            aria-hidden="true"
-            className="material-symbols-outlined text-base"
+        <div className="flex items-center gap-xs">
+          <Link
+            href="/processes"
+            className="inline-flex items-center gap-1 rounded-md border border-outline-variant bg-surface-container-lowest px-sm py-1.5 font-label-sm text-on-surface-variant transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            add
-          </span>
-          <span>Nova Dispensa</span>
-        </Link>
+            <span
+              aria-hidden="true"
+              className="material-symbols-outlined text-base"
+            >
+              format_list_bulleted
+            </span>
+            <span>Ver todos</span>
+          </Link>
+
+          <Link
+            href="/processes/new"
+            className="inline-flex items-center gap-1 rounded-md border border-outline-variant bg-surface-container-low px-sm py-1.5 font-label-sm text-on-surface transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <span
+              aria-hidden="true"
+              className="material-symbols-outlined text-base"
+            >
+              add
+            </span>
+            <span>Nova Dispensa</span>
+          </Link>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-labelledby="recent-processes-table-caption"
+        className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+      >
         <table className="w-full text-left font-body-sm">
-          <caption className="sr-only">
+          <caption id="recent-processes-table-caption" className="sr-only">
             Lista de processos de dispensa recentes
           </caption>
           <thead>
@@ -97,6 +117,12 @@ export default function RecentProcessesTable({ processes = [] }) {
               >
                 Status
               </th>
+              <th
+                scope="col"
+                className="px-md py-3 font-semibold text-xs uppercase tracking-wider text-right"
+              >
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/40 text-on-surface">
@@ -105,21 +131,34 @@ export default function RecentProcessesTable({ processes = [] }) {
                 process.number,
                 process.year,
               );
+              const processTitle =
+                process.title || process.object || "Sem título";
               return (
                 <tr
                   key={process.id}
                   className="transition-colors hover:bg-surface-container-low/60"
                 >
-                  <td className="whitespace-nowrap px-md py-3 font-semibold text-primary">
-                    {formattedNumber}
-                  </td>
+                  <th
+                    scope="row"
+                    className="whitespace-nowrap px-md py-3 font-semibold text-primary"
+                  >
+                    <Link
+                      href={`/processes/${process.id}`}
+                      className="rounded hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {formattedNumber}
+                    </Link>
+                  </th>
                   <td
                     className="px-md py-3 font-medium text-on-surface max-w-xs md:max-w-md truncate"
                     title={process.object || process.title}
                   >
-                    <span className="block truncate">
-                      {process.title || process.object || "Sem título"}
-                    </span>
+                    <Link
+                      href={`/processes/${process.id}`}
+                      className="block truncate hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {processTitle}
+                    </Link>
                   </td>
                   <td className="hidden px-md py-3 text-on-surface-variant md:table-cell whitespace-nowrap">
                     {process.department}
@@ -132,6 +171,21 @@ export default function RecentProcessesTable({ processes = [] }) {
                   </td>
                   <td className="whitespace-nowrap px-md py-3 text-right">
                     <ProcessStatusBadge status={process.status} />
+                  </td>
+                  <td className="whitespace-nowrap px-md py-3 text-right">
+                    <Link
+                      href={`/processes/${process.id}`}
+                      aria-label={`Ver detalhes do processo ${formattedNumber} - ${processTitle}`}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-label-sm text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <span>Detalhes</span>
+                      <span
+                        aria-hidden="true"
+                        className="material-symbols-outlined text-base"
+                      >
+                        arrow_forward
+                      </span>
+                    </Link>
                   </td>
                 </tr>
               );

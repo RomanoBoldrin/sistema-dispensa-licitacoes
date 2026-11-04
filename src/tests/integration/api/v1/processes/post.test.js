@@ -589,6 +589,54 @@ describe("POST /api/v1/processes", () => {
       const data2 = await response2.json();
       expect(data2.number).toBe(startNumber + 2);
     });
+
+    test("Concurrent POST requests generate unique sequential numbers without collision", async () => {
+      const currentYear = new Date().getFullYear();
+      const maxBefore = await prisma.process.aggregate({
+        where: { year: currentYear },
+        _max: { number: true },
+      });
+      const startNumber = maxBefore._max.number || 0;
+
+      const concurrentCount = 5;
+      const responses = await Promise.all(
+        Array.from({ length: concurrentCount }, (_, index) =>
+          fetch(`${webserver.origin}/api/v1/processes`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Cookie: index % 2 === 0 ? solicitanteCookieA : solicitanteCookieB,
+            },
+            body: JSON.stringify({
+              ...validPayload,
+              title: `Concorrente ${index + 1}`,
+              estimatedValue: 1500.5,
+              legalBasis: "Art. 75, II da Lei 14.133/2021",
+            }),
+          }),
+        ),
+      );
+
+      const bodies = [];
+      for (const res of responses) {
+        expect(res.status).toBe(201);
+        bodies.push(await res.json());
+      }
+
+      const assignedNumbers = bodies
+        .map((item) => item.number)
+        .sort((a, b) => a - b);
+      const expectedNumbers = Array.from(
+        { length: concurrentCount },
+        (_, index) => startNumber + index + 1,
+      );
+      expect(assignedNumbers).toEqual(expectedNumbers);
+
+      for (const body of bodies) {
+        expect(Number(body.estimatedValue)).toBeCloseTo(1500.5, 2);
+        expect(body.legalBasis).toBe("Art. 75, II da Lei 14.133/2021");
+      }
+    });
   });
 
   describe("Transaction Integrity and Atomicity", () => {

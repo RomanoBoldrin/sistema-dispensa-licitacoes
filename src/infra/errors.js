@@ -98,6 +98,28 @@ export class ForbiddenError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  constructor({ cause, message, action } = {}) {
+    super(
+      message ||
+        "The request conflicts with the current state of the resource.",
+      { cause },
+    );
+    this.name = "ConflictError";
+    this.action = action || "Verify the current resource status and try again.";
+    this.statusCode = 409;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      action: this.action,
+      status_code: this.statusCode,
+    };
+  }
+}
+
 export class UnauthorizedError extends Error {
   constructor({ cause, message, action } = {}) {
     super(message || "User not authenticated.", { cause });

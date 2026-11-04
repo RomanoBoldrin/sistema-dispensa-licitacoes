@@ -84,6 +84,12 @@ async function getAuthenticatedUserFromRequest(request) {
       role: true,
       isActive: true,
       departmentId: true,
+      department: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   });
 

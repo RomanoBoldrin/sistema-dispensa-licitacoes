@@ -26,12 +26,13 @@ export default function DashboardSidebar({
           isActualRoute: true,
           badge: "Criar DFD",
           badgeColor: "bg-primary text-on-primary",
+          allowedRoles: ["ADMIN", "SOLICITANTE", "AGENTE_CONTRATACAO"],
         },
         {
           label: "Lista de Processos",
-          href: null,
+          href: "/processes",
           icon: "format_list_bulleted",
-          badge: "Em breve",
+          isActualRoute: true,
         },
       ],
     },
@@ -150,9 +151,17 @@ export default function DashboardSidebar({
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto px-sm py-md space-y-md">
           {navGroups.map((group) => {
-            const visibleItems = group.items.filter(
-              (item) => !item.adminOnly || userRole === "ADMIN",
-            );
+            const visibleItems = group.items.filter((item) => {
+              if (item.adminOnly && userRole !== "ADMIN") return false;
+              if (
+                item.allowedRoles &&
+                userRole &&
+                !item.allowedRoles.includes(userRole)
+              ) {
+                return false;
+              }
+              return true;
+            });
 
             if (visibleItems.length === 0) return null;
 
@@ -164,7 +173,13 @@ export default function DashboardSidebar({
 
                 <ul className="mt-1.5 space-y-1">
                   {visibleItems.map((item) => {
-                    const isActive = item.href && router.asPath === item.href;
+                    const currentPath = router.asPath.split("?")[0];
+                    const isActive =
+                      item.href &&
+                      (currentPath === item.href ||
+                        (item.href === "/processes" &&
+                          currentPath.startsWith("/processes/") &&
+                          currentPath !== "/processes/new"));
 
                     if (item.isActualRoute && item.href) {
                       return (

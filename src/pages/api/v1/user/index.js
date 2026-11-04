@@ -42,5 +42,7 @@ async function getHandler(request, response) {
     email: userFound.email,
     role: userFound.role,
     is_active: userFound.isActive,
+    department_id: userFound.departmentId,
+    department: userFound.department?.name ?? null,
   });
 }
