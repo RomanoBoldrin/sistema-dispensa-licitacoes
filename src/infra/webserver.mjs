@@ -1,16 +1,15 @@
 function getOrigin() {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+
   // Vercel (Preview or Production)
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
 
-  // Local development / tests
-  if (["test", "development"].includes(process.env.NODE_ENV)) {
-    return "http://localhost:3000";
-  }
-
-  // Todo: Include a Fallback
-  return "";
+  // Local development / tests fallback
+  return "http://localhost:3000";
 }
 
 const webserver = {

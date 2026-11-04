@@ -5,6 +5,14 @@ import {
   ValidationError,
 } from "@/infra/errors.js";
 import { prisma } from "@/infra/prisma.js";
+import {
+  DOCUMENT_TYPE_LABELS,
+  canUserManageDocuments,
+} from "./document.service.js";
+import {
+  buildComparativePriceMap,
+  canUserManageQuotations,
+} from "./quotation.service.js";
 
 export const ALLOWED_CREATE_ROLES = [
   "ADMIN",
@@ -98,6 +106,57 @@ const PROCESS_DETAIL_SELECT = {
   },
   supplierJustification: true,
   demandDocument: true,
+  quotations: {
+    orderBy: {
+      value: "asc",
+    },
+    select: {
+      id: true,
+      processId: true,
+      supplierId: true,
+      value: true,
+      description: true,
+      quotedAt: true,
+      createdAt: true,
+      supplier: {
+        select: {
+          id: true,
+          legalName: true,
+          tradeName: true,
+          cnpj: true,
+          email: true,
+          phone: true,
+        },
+      },
+    },
+  },
+  documents: {
+    where: {
+      isActive: true,
+      deletedAt: null,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      processId: true,
+      type: true,
+      filename: true,
+      mimeType: true,
+      size: true,
+      isActive: true,
+      createdAt: true,
+      uploadedBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  },
   auditLogs: {
     where: {
       deletedAt: null,
@@ -336,9 +395,56 @@ function serializeProcessDetail(processRecord, user) {
             : null,
         }))
       : undefined,
+    quotations: processRecord.quotations
+      ? processRecord.quotations.map((q) => ({
+          id: q.id,
+          processId: q.processId,
+          supplierId: q.supplierId,
+          value: Number(q.value).toFixed(2),
+          description: q.description ?? null,
+          quotedAt: q.quotedAt ? q.quotedAt.toISOString() : null,
+          createdAt: q.createdAt.toISOString(),
+          supplier: q.supplier
+            ? {
+                id: q.supplier.id,
+                legalName: q.supplier.legalName,
+                tradeName: q.supplier.tradeName,
+                cnpj: q.supplier.cnpj,
+                email: q.supplier.email,
+                phone: q.supplier.phone,
+              }
+            : null,
+        }))
+      : [],
+    comparativeMap: processRecord.quotations
+      ? buildComparativePriceMap(processRecord.quotations)
+      : null,
+    documents: processRecord.documents
+      ? processRecord.documents.map((doc) => ({
+          id: doc.id,
+          processId: doc.processId,
+          type: doc.type,
+          typeLabel: DOCUMENT_TYPE_LABELS[doc.type] || doc.type,
+          filename: doc.filename,
+          mimeType: doc.mimeType,
+          size: doc.size,
+          isActive: doc.isActive,
+          createdAt: doc.createdAt.toISOString(),
+          uploadedBy: doc.uploadedBy
+            ? {
+                id: doc.uploadedBy.id,
+                name: doc.uploadedBy.name,
+                email: doc.uploadedBy.email,
+                role: doc.uploadedBy.role,
+              }
+            : null,
+        }))
+      : [],
     permissions: user
       ? {
           canEdit: canUserEditProcess(user, processRecord),
+          canManageQuotations: canUserManageQuotations(user, processRecord),
+          canManageDocuments: canUserManageDocuments(user, processRecord),
         }
       : undefined,
   };

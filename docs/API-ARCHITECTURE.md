@@ -377,25 +377,29 @@ src/
 
 The Pages Router maps files under `src/pages/api/v1/` directly to versioned API URLs.
 
-| File                                                     | Endpoint                                  | Status      |
-| -------------------------------------------------------- | ----------------------------------------- | ----------- |
-| `src/pages/api/v1/status/index.js`                       | `/api/v1/status`                          | Implemented |
-| `src/pages/api/v1/auth/sessions/index.js`                | `/api/v1/auth/sessions`                   | Implemented |
-| `src/pages/api/v1/auth/forgot-password/index.js`         | `/api/v1/auth/forgot-password`            | Implemented |
-| `src/pages/api/v1/auth/reset-password/index.js`          | `/api/v1/auth/reset-password`             | Implemented |
-| `src/pages/api/v1/user/index.js`                         | `/api/v1/user`                            | Implemented |
-| `src/pages/api/v1/users/index.js`                        | `/api/v1/users`                           | Implemented |
-| `src/pages/api/v1/users/[username]/index.js`             | `/api/v1/users/:username`                 | Implemented |
-| `src/pages/api/v1/dashboard/index.js`                    | `/api/v1/dashboard`                       | Implemented |
-| `src/pages/api/v1/processes/index.js`                    | `/api/v1/processes`                       | Implemented |
-| `src/pages/api/v1/processes/[processId]/index.js`        | `/api/v1/processes/:processId`            | Implemented |
-| `src/pages/api/v1/processes/[processId]/submit/index.js` | `/api/v1/processes/:processId/submit`     | Planned     |
-| `src/pages/api/v1/processes/[processId]/quotations/...`  | `/api/v1/processes/:processId/quotations` | Planned     |
-| `src/pages/api/v1/processes/[processId]/supplier/...`    | `/api/v1/processes/:processId/supplier`   | Planned     |
-| `src/pages/api/v1/processes/[processId]/documents/...`   | `/api/v1/processes/:processId/documents`  | Planned     |
-| `src/pages/api/v1/processes/[processId]/approve/...`     | `/api/v1/processes/:processId/approve`    | Planned     |
-| `src/pages/api/v1/processes/[processId]/reject/...`      | `/api/v1/processes/:processId/reject`     | Planned     |
-| `src/pages/api/v1/processes/[processId]/complete/...`    | `/api/v1/processes/:processId/complete`   | Planned     |
+| File                                                                       | Endpoint                                               | Status      |
+| -------------------------------------------------------------------------- | ------------------------------------------------------ | ----------- |
+| `src/pages/api/v1/status/index.js`                                         | `/api/v1/status`                                       | Implemented |
+| `src/pages/api/v1/auth/sessions/index.js`                                  | `/api/v1/auth/sessions`                                | Implemented |
+| `src/pages/api/v1/auth/forgot-password/index.js`                           | `/api/v1/auth/forgot-password`                         | Implemented |
+| `src/pages/api/v1/auth/reset-password/index.js`                            | `/api/v1/auth/reset-password`                          | Implemented |
+| `src/pages/api/v1/user/index.js`                                           | `/api/v1/user`                                         | Implemented |
+| `src/pages/api/v1/users/index.js`                                          | `/api/v1/users`                                        | Implemented |
+| `src/pages/api/v1/users/[username]/index.js`                               | `/api/v1/users/:username`                              | Implemented |
+| `src/pages/api/v1/dashboard/index.js`                                      | `/api/v1/dashboard`                                    | Implemented |
+| `src/pages/api/v1/processes/index.js`                                      | `/api/v1/processes`                                    | Implemented |
+| `src/pages/api/v1/processes/[processId]/index.js`                          | `/api/v1/processes/:processId`                         | Implemented |
+| `src/pages/api/v1/processes/[processId]/quotations/index.js`               | `/api/v1/processes/:processId/quotations`              | Implemented |
+| `src/pages/api/v1/processes/[processId]/quotations/[quotationId]/index.js` | `/api/v1/processes/:processId/quotations/:quotationId` | Implemented |
+| `src/pages/api/v1/processes/[processId]/documents/index.js`                | `/api/v1/processes/:processId/documents`               | Implemented |
+| `src/pages/api/v1/processes/[processId]/documents/[documentId]/index.js`   | `/api/v1/processes/:processId/documents/:documentId`   | Implemented |
+| `src/pages/api/v1/suppliers/index.js`                                      | `/api/v1/suppliers`                                    | Implemented |
+| `src/pages/api/v1/suppliers/[supplierId]/index.js`                         | `/api/v1/suppliers/:supplierId`                        | Implemented |
+| `src/pages/api/v1/processes/[processId]/submit/index.js`                   | `/api/v1/processes/:processId/submit`                  | Planned     |
+| `src/pages/api/v1/processes/[processId]/supplier/...`                      | `/api/v1/processes/:processId/supplier`                | Planned     |
+| `src/pages/api/v1/processes/[processId]/approve/...`                       | `/api/v1/processes/:processId/approve`                 | Planned     |
+| `src/pages/api/v1/processes/[processId]/reject/...`                        | `/api/v1/processes/:processId/reject`                  | Planned     |
+| `src/pages/api/v1/processes/[processId]/complete/...`                      | `/api/v1/processes/:processId/complete`                | Planned     |
 
 ---
 
@@ -792,24 +796,28 @@ The API enforces the following security guarantees:
 
 # 25. API Contract Summary
 
-| Resource / Action    | Method      | Endpoint                                           | Phase Status        |
-| -------------------- | ----------- | -------------------------------------------------- | ------------------- |
-| System status        | GET         | `/api/v1/status`                                   | Implemented         |
-| Login / Logout       | POST/DELETE | `/api/v1/auth/sessions`                            | Implemented         |
-| Forgot password      | POST        | `/api/v1/auth/forgot-password`                     | Implemented         |
-| Reset password       | POST        | `/api/v1/auth/reset-password`                      | Implemented         |
-| Current user         | GET         | `/api/v1/user`                                     | Implemented         |
-| Users                | POST/GET    | `/api/v1/users`, `/api/v1/users/:username`         | Implemented         |
-| Dashboard            | GET         | `/api/v1/dashboard`                                | Implemented         |
-| List processes       | GET         | `/api/v1/processes`                                | Implemented (Ph. 1) |
-| Create process + DFD | POST        | `/api/v1/processes`                                | Implemented (Ph. 1) |
-| Get process detail   | GET         | `/api/v1/processes/:processId`                     | Implemented (Ph. 1) |
-| Update draft process | PATCH       | `/api/v1/processes/:processId`                     | Implemented (Ph. 1) |
-| Submit process       | POST        | `/api/v1/processes/:processId/submit`              | Planned (Ph. 3)     |
-| Quotations           | GET/POST    | `/api/v1/processes/:processId/quotations`          | Planned (Ph. 2)     |
-| Select supplier      | POST        | `/api/v1/processes/:processId/supplier`            | Planned (Ph. 2)     |
-| Documents            | GET/POST    | `/api/v1/processes/:processId/documents`           | Planned (Ph. 2)     |
-| Submit for approval  | POST        | `/api/v1/processes/:processId/submit-for-approval` | Planned (Ph. 3)     |
-| Approve              | POST        | `/api/v1/processes/:processId/approve`             | Planned (Ph. 4)     |
-| Reject               | POST        | `/api/v1/processes/:processId/reject`              | Planned (Ph. 4)     |
-| Complete             | POST        | `/api/v1/processes/:processId/complete`            | Planned (Ph. 5)     |
+| Resource / Action     | Method        | Endpoint                                               | Phase Status        |
+| --------------------- | ------------- | ------------------------------------------------------ | ------------------- |
+| System status         | GET           | `/api/v1/status`                                       | Implemented         |
+| Login / Logout        | POST/DELETE   | `/api/v1/auth/sessions`                                | Implemented         |
+| Forgot password       | POST          | `/api/v1/auth/forgot-password`                         | Implemented         |
+| Reset password        | POST          | `/api/v1/auth/reset-password`                          | Implemented         |
+| Current user          | GET           | `/api/v1/user`                                         | Implemented         |
+| Users                 | POST/GET      | `/api/v1/users`, `/api/v1/users/:username`             | Implemented         |
+| Dashboard             | GET           | `/api/v1/dashboard`                                    | Implemented         |
+| List processes        | GET           | `/api/v1/processes`                                    | Implemented (Ph. 1) |
+| Create process + DFD  | POST          | `/api/v1/processes`                                    | Implemented (Ph. 1) |
+| Get process detail    | GET           | `/api/v1/processes/:processId`                         | Implemented (Ph. 1) |
+| Update draft process  | PATCH         | `/api/v1/processes/:processId`                         | Implemented (Ph. 1) |
+| List/Create suppliers | GET/POST      | `/api/v1/suppliers`                                    | Implemented (Ph. 2) |
+| Supplier detail/edit  | GET/PATCH     | `/api/v1/suppliers/:supplierId`                        | Implemented (Ph. 2) |
+| Quotations + Map      | GET/POST      | `/api/v1/processes/:processId/quotations`              | Implemented (Ph. 2) |
+| Quotation detail/edit | GET/PATCH/DEL | `/api/v1/processes/:processId/quotations/:quotationId` | Implemented (Ph. 2) |
+| Documents list/upload | GET/POST      | `/api/v1/processes/:processId/documents`               | Implemented (Ph. 2) |
+| Document stream/del   | GET/DELETE    | `/api/v1/processes/:processId/documents/:documentId`   | Implemented (Ph. 2) |
+| Submit process        | POST          | `/api/v1/processes/:processId/submit`                  | Planned (Ph. 3)     |
+| Select supplier       | POST          | `/api/v1/processes/:processId/supplier`                | Planned (Ph. 3)     |
+| Submit for approval   | POST          | `/api/v1/processes/:processId/submit-for-approval`     | Planned (Ph. 3)     |
+| Approve               | POST          | `/api/v1/processes/:processId/approve`                 | Planned (Ph. 4)     |
+| Reject                | POST          | `/api/v1/processes/:processId/reject`                  | Planned (Ph. 4)     |
+| Complete              | POST          | `/api/v1/processes/:processId/complete`                | Planned (Ph. 5)     |

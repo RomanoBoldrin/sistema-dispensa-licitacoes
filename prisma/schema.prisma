@@ -231,7 +231,7 @@ model Process {
 // ─────────────────────────────────────────────
 
 model DemandDocument {
-  id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid())
 
   processId String  @unique @db.Uuid
   process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
@@ -302,6 +302,7 @@ model Quotation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([processId, supplierId])
   @@index([processId])
   @@index([supplierId])
 }
