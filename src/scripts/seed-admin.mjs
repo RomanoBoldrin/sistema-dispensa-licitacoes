@@ -9,6 +9,25 @@ async function main() {
   });
 
   if (existingAdmin) {
+    if (!existingAdmin.departmentId) {
+      console.log(
+        `Admin user exists but has no department. Ensuring default department...`,
+      );
+      const defaultDepartment = await db.department.upsert({
+        where: { name: "Secretaria de Administração" },
+        update: {},
+        create: { name: "Secretaria de Administração" },
+      });
+
+      await db.user.update({
+        where: { id: existingAdmin.id },
+        data: { departmentId: defaultDepartment.id },
+      });
+      console.log(
+        `Associated admin with department: ${defaultDepartment.name}.`,
+      );
+    }
+
     console.log(
       `You're all set, admin user already exists (username: ${existingAdmin.name}). Exiting successfully.`,
     );
@@ -31,6 +50,13 @@ async function main() {
     rawPassword = rawPassword || "admin123";
   }
 
+  console.log(`Provisioning default department...`);
+  const defaultDepartment = await db.department.upsert({
+    where: { name: "Secretaria de Administração" },
+    update: {},
+    create: { name: "Secretaria de Administração" },
+  });
+
   console.log(`Provisioning admin user: ${name} (${email})...`);
 
   const passwordHash = await password.hash(rawPassword);
@@ -42,6 +68,7 @@ async function main() {
       passwordHash: passwordHash,
       role: "ADMIN",
       isActive: true,
+      departmentId: defaultDepartment.id,
     },
   });
 
