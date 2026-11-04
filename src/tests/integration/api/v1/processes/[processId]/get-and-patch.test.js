@@ -211,7 +211,11 @@ describe("GET and PATCH /api/v1/processes/[processId]", () => {
       expect(body.demandDocument.detailedJustification).toBe(
         "Substituição de equipamentos sem conserto.",
       );
-      expect(body.permissions).toEqual({ canEdit: true });
+      expect(body.permissions).toEqual({
+        canEdit: true,
+        canManageQuotations: true,
+        canManageDocuments: true,
+      });
       expect(Array.isArray(body.auditLogs)).toBe(true);
       expect(body.auditLogs.length).toBeGreaterThanOrEqual(2);
     });

@@ -17,6 +17,9 @@ import {
   CATEGORIES,
   URGENCY_OPTIONS,
 } from "@/components/demand-formalization/DemandFormalizationWizard.jsx";
+import DocumentManagementTab from "@/components/procurement/DocumentManagementTab";
+import PriceResearchTab from "@/components/procurement/PriceResearchTab";
+import SupplierManagementTab from "@/components/procurement/SupplierManagementTab";
 
 export async function getServerSideProps(context) {
   const { req, params } = context;
@@ -73,10 +76,29 @@ export async function getServerSideProps(context) {
 
     const initialProcess = await processResponse.json();
 
+    let initialSuppliers = [];
+    try {
+      const suppliersRes = await fetch(
+        `${protocol}://${host}/api/v1/suppliers?limit=100`,
+        {
+          headers: {
+            cookie: cookieHeader,
+          },
+        },
+      );
+      if (suppliersRes.ok) {
+        const suppliersData = await suppliersRes.json();
+        initialSuppliers = suppliersData.data || [];
+      }
+    } catch {
+      // Ignored fallback
+    }
+
     return {
       props: {
         user,
         initialProcess,
+        initialSuppliers,
         initialError: null,
       },
     };
@@ -118,19 +140,16 @@ const MODULE_TABS = [
     id: "documents",
     label: "Documentos",
     icon: "folder_open",
-    phaseBadge: "Fase 2",
   },
   {
     id: "quotations",
     label: "Pesquisa de Preços",
     icon: "request_quote",
-    phaseBadge: "Fase 2",
   },
   {
     id: "supplier",
-    label: "Fornecedor e Justificativas",
+    label: "Fornecedores",
     icon: "storefront",
-    phaseBadge: "Fase 2/3",
   },
   {
     id: "approvals",
@@ -208,14 +227,66 @@ function WorkflowStepper({ currentStatus }) {
 export default function ProcessDetailPage({
   user,
   initialProcess,
+  initialSuppliers = [],
   initialError,
 }) {
   const [processData, setProcessData] = useState(initialProcess);
+  const [suppliers, setSuppliers] = useState(initialSuppliers || []);
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editErrors, setEditErrors] = useState({});
   const [feedbackBanner, setFeedbackBanner] = useState(null);
+
+  const refreshProcessData = async () => {
+    if (!processData?.id) return;
+    try {
+      const res = await fetch(`/api/v1/processes/${processData.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProcessData(data);
+      }
+    } catch {
+      // Ignored
+    }
+  };
+
+  const handleDocumentUploaded = (newDoc) => {
+    setProcessData((prev) => ({
+      ...prev,
+      documents: [newDoc, ...(prev?.documents || [])],
+    }));
+    refreshProcessData();
+  };
+
+  const handleDocumentDeleted = (docId) => {
+    setProcessData((prev) => ({
+      ...prev,
+      documents: (prev?.documents || []).filter((d) => d.id !== docId),
+    }));
+    refreshProcessData();
+  };
+
+  const handleQuotationCreated = () => {
+    refreshProcessData();
+  };
+
+  const handleQuotationUpdated = () => {
+    refreshProcessData();
+  };
+
+  const handleQuotationDeleted = () => {
+    refreshProcessData();
+  };
+
+  const handleSupplierSaved = (savedSupplier, isEdit) => {
+    setSuppliers((prev) => {
+      if (isEdit) {
+        return prev.map((s) => (s.id === savedSupplier.id ? savedSupplier : s));
+      }
+      return [savedSupplier, ...prev];
+    });
+  };
 
   const [editForm, setEditForm] = useState(() =>
     buildEditFormState(initialProcess),
@@ -1491,14 +1562,65 @@ export default function ProcessDetailPage({
             </div>
           )}
 
-          {/* Subsequent Module Placeholders (Documents, Quotations, Supplier, Approvals) */}
-          {["documents", "quotations", "supplier", "approvals"].includes(
-            activeTab,
-          ) && (
+          {/* Tab Panel: Documents */}
+          {activeTab === "documents" && (
             <div
-              id={`tabpanel-${activeTab}`}
+              id="tabpanel-documents"
               role="tabpanel"
-              aria-labelledby={`tab-${activeTab}`}
+              aria-labelledby="tab-documents"
+            >
+              <DocumentManagementTab
+                processId={processData.id}
+                documents={processData.documents || []}
+                canManage={processData.permissions?.canManageDocuments}
+                onDocumentUploaded={handleDocumentUploaded}
+                onDocumentDeleted={handleDocumentDeleted}
+              />
+            </div>
+          )}
+
+          {/* Tab Panel: Quotations / Comparative Map */}
+          {activeTab === "quotations" && (
+            <div
+              id="tabpanel-quotations"
+              role="tabpanel"
+              aria-labelledby="tab-quotations"
+            >
+              <PriceResearchTab
+                processId={processData.id}
+                quotations={processData.quotations || []}
+                comparativeMap={processData.comparativeMap}
+                suppliers={suppliers}
+                canManage={processData.permissions?.canManageQuotations}
+                onQuotationCreated={handleQuotationCreated}
+                onQuotationUpdated={handleQuotationUpdated}
+                onQuotationDeleted={handleQuotationDeleted}
+                onSupplierCreated={handleSupplierSaved}
+              />
+            </div>
+          )}
+
+          {/* Tab Panel: Suppliers */}
+          {activeTab === "supplier" && (
+            <div
+              id="tabpanel-supplier"
+              role="tabpanel"
+              aria-labelledby="tab-supplier"
+            >
+              <SupplierManagementTab
+                suppliers={suppliers}
+                userRole={user.role}
+                onSupplierSaved={handleSupplierSaved}
+              />
+            </div>
+          )}
+
+          {/* Subsequent Module Placeholder: Approvals (Fase 4/5) */}
+          {activeTab === "approvals" && (
+            <div
+              id="tabpanel-approvals"
+              role="tabpanel"
+              aria-labelledby="tab-approvals"
               className="rounded-xl border border-outline-variant/70 bg-surface-container-lowest p-lg text-center"
             >
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
@@ -1506,19 +1628,15 @@ export default function ProcessDetailPage({
                   aria-hidden="true"
                   className="material-symbols-outlined text-3xl text-primary"
                 >
-                  {MODULE_TABS.find((t) => t.id === activeTab)?.icon ||
-                    "layers"}
+                  gavel
                 </span>
               </div>
               <h2 className="mt-sm font-headline-sm font-bold text-on-surface">
-                {MODULE_TABS.find((t) => t.id === activeTab)?.label}
+                Aprovação e Publicação
               </h2>
               <p className="mx-auto mt-xs max-w-lg font-body-md text-on-surface-variant">
-                Este módulo integra as próximas etapas do ciclo de vida do
-                processo{" "}
-                <strong className="text-on-surface">{formattedNumber}</strong>{" "}
-                (instrução documental, pesquisa comparativa de preços, seleção
-                de fornecedor, aprovação interna e publicação).
+                Este módulo integrará as etapas finais de aprovação interna pela
+                autoridade competente e publicação (Fases 4 e 5).
               </p>
               <div className="mt-md">
                 <button

@@ -188,3 +188,62 @@ export function formatProcessNumber(number, year) {
   if (!number || !year) return "DP-—/—";
   return `DP-${String(number).padStart(3, "0")}/${year}`;
 }
+
+export const ALLOWED_DOCUMENT_TYPES = [
+  "PESQUISA_PRECOS",
+  "JUSTIFICATIVA_PRECO",
+  "RAZAO_ESCOLHA_FORNECEDOR",
+  "DOCUMENTACAO_FORNECEDOR",
+  "PARECER_JURIDICO",
+  "TERMO_REFERENCIA",
+  "OUTRO",
+];
+
+export const DOCUMENT_TYPE_LABELS = {
+  TERMO_REFERENCIA: "Termo de Referência (TR)",
+  PESQUISA_PRECOS: "Pesquisa de Preços",
+  DOCUMENTACAO_FORNECEDOR: "Documentação do Fornecedor",
+  JUSTIFICATIVA_PRECO: "Justificativa de Preço",
+  RAZAO_ESCOLHA_FORNECEDOR: "Razão da Escolha do Fornecedor",
+  PARECER_JURIDICO: "Parecer Jurídico",
+  OUTRO: "Outro Documento",
+};
+
+export function normalizeCnpj(cnpj) {
+  if (typeof cnpj !== "string") return "";
+  return cnpj.replace(/\D/g, "");
+}
+
+export function formatCnpj(cnpj) {
+  const digits = normalizeCnpj(cnpj);
+  if (digits.length !== 14) return cnpj || "";
+  return digits.replace(
+    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+    "$1.$2.$3/$4-$5",
+  );
+}
+
+export function isValidCnpj(cnpj) {
+  if (typeof cnpj !== "string") return false;
+  const clean = normalizeCnpj(cnpj);
+  if (clean.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(clean)) return false;
+
+  let sum = 0;
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (let i = 0; i < 12; i++) {
+    sum += Number(clean[i]) * weights1[i];
+  }
+  let rem = sum % 11;
+  const d1 = rem < 2 ? 0 : 11 - rem;
+  if (Number(clean[12]) !== d1) return false;
+
+  sum = 0;
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (let i = 0; i < 13; i++) {
+    sum += Number(clean[i]) * weights2[i];
+  }
+  rem = sum % 11;
+  const d2 = rem < 2 ? 0 : 11 - rem;
+  return Number(clean[13]) === d2;
+}
