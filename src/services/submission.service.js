@@ -9,14 +9,10 @@ import { validateLegalClassification } from "./legal.service.js";
 import { canUserAccessProcess, isValidUuid } from "./process.service.js";
 import { buildComparativePriceMap } from "./quotation.service.js";
 
-export const SUBMITTABLE_SOURCE_STATUSES = [
-  "DRAFT",
-  "IN_ANALYSIS",
-  "PRICE_RESEARCH",
-  "SUPPLIER_SELECTED",
-];
+export const SUBMITTABLE_SOURCE_STATUSES = ["DRAFT", "RETURNED_FOR_ADJUSTMENT"];
 
 export const LOCKED_SUBMISSION_STATUSES = [
+  "IN_ANALYSIS",
   "AWAITING_APPROVAL",
   "APPROVED",
   "COMPLETED",
@@ -486,6 +482,10 @@ export async function submitProcess(processId, user) {
           deletedAt: null,
         },
       },
+      approvals: {
+        where: { deletedAt: null },
+        select: { cycle: true },
+      },
     },
   });
 
@@ -507,6 +507,13 @@ export async function submitProcess(processId, user) {
   }
 
   // 2. Lifecycle status check
+  if (processRecord.status === "IN_ANALYSIS") {
+    throw new ConflictError({
+      message: "O processo já foi submetido e está em análise técnica.",
+      action: "Acompanhe a tramitação do processo na aba de aprovação.",
+    });
+  }
+
   if (processRecord.status === "AWAITING_APPROVAL") {
     throw new ConflictError({
       message: "O processo já foi submetido e está aguardando aprovação.",
@@ -549,14 +556,20 @@ export async function submitProcess(processId, user) {
     });
   }
 
-  // 4. Atomic transaction: update status and log audit event
+  // 4. Calculate review cycle (increment on resubmission)
+  const isResubmission = processRecord.status === "RETURNED_FOR_ADJUSTMENT";
+  const existingCycles = processRecord.approvals?.map((a) => a.cycle) || [];
+  const maxCycle = existingCycles.length > 0 ? Math.max(...existingCycles) : 0;
+  const nextCycle = isResubmission ? maxCycle + 1 : Math.max(1, maxCycle);
+
+  // 5. Atomic transaction: update status, assign Stage 1 task, and log audit events
   const formattedNumber = `DP-${String(processRecord.number).padStart(3, "0")}/${processRecord.year}`;
 
   const updatedProcess = await prisma.$transaction(async (tx) => {
     const updated = await tx.process.update({
       where: { id: processRecord.id },
       data: {
-        status: "AWAITING_APPROVAL",
+        status: "IN_ANALYSIS",
       },
       include: {
         department: true,
@@ -584,12 +597,48 @@ export async function submitProcess(processId, user) {
       },
     });
 
+    // Create Stage 1 pending task for AGENTE_CONTRATACAO
+    await tx.approval.create({
+      data: {
+        processId: processRecord.id,
+        stage: "ANALYSIS",
+        assignedRole: "AGENTE_CONTRATACAO",
+        cycle: nextCycle,
+      },
+    });
+
+    if (isResubmission) {
+      await tx.auditLog.create({
+        data: {
+          processId: processRecord.id,
+          userId: user.id,
+          action: "PROCESS_RESUBMITTED",
+          fromStatus: "RETURNED_FOR_ADJUSTMENT",
+          toStatus: "IN_ANALYSIS",
+          description: `Processo ${formattedNumber} ressubmetido após ajustes para nova rodada de análise técnica (Ciclo ${nextCycle}) por ${user.name} (${user.role}).`,
+        },
+      });
+    } else {
+      await tx.auditLog.create({
+        data: {
+          processId: processRecord.id,
+          userId: user.id,
+          action: "PROCESS_SUBMITTED",
+          fromStatus: "DRAFT",
+          toStatus: "IN_ANALYSIS",
+          description: `Processo ${formattedNumber} submetido para análise técnica por ${user.name} (${user.role}).`,
+        },
+      });
+    }
+
     await tx.auditLog.create({
       data: {
         processId: processRecord.id,
         userId: user.id,
-        action: "PROCESS_SUBMITTED",
-        description: `Processo ${formattedNumber} submetido para análise interna / aprovação por ${user.name} (${user.role}).`,
+        action: "APPROVAL_TASK_ASSIGNED",
+        fromStatus: "IN_ANALYSIS",
+        toStatus: "IN_ANALYSIS",
+        description: `Processo encaminhado para a fila de Análise Técnica (AGENTE_CONTRATACAO, Ciclo ${nextCycle}).`,
       },
     });
 
@@ -598,7 +647,9 @@ export async function submitProcess(processId, user) {
 
   return {
     success: true,
-    message: `Processo ${formattedNumber} submetido com sucesso para análise interna.`,
+    message: isResubmission
+      ? `Processo ${formattedNumber} ressubmetido com sucesso para nova rodada de análise técnica.`
+      : `Processo ${formattedNumber} submetido com sucesso para análise técnica.`,
     process: {
       id: updatedProcess.id,
       number: updatedProcess.number,
@@ -607,6 +658,7 @@ export async function submitProcess(processId, user) {
       title: updatedProcess.title,
       updatedAt: updatedProcess.updatedAt.toISOString(),
     },
+    cycle: nextCycle,
     completeness,
   };
 }

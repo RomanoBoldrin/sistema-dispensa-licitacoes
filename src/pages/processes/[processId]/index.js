@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ProcessStatusBadge from "@/components/dashboard/ProcessStatusBadge";
@@ -17,6 +18,7 @@ import {
   CATEGORIES,
   URGENCY_OPTIONS,
 } from "@/components/demand-formalization/DemandFormalizationWizard.jsx";
+import ApprovalWorkflowTab from "@/components/procurement/ApprovalWorkflowTab";
 import DocumentManagementTab from "@/components/procurement/DocumentManagementTab";
 import JustificationsTab from "@/components/procurement/JustificationsTab";
 import LegalClassificationTab from "@/components/procurement/LegalClassificationTab";
@@ -97,11 +99,29 @@ export async function getServerSideProps(context) {
       // Ignored fallback
     }
 
+    let initialWorkflow = null;
+    try {
+      const workflowRes = await fetch(
+        `${protocol}://${host}/api/v1/processes/${encodeURIComponent(processId)}/workflow`,
+        {
+          headers: {
+            cookie: cookieHeader,
+          },
+        },
+      );
+      if (workflowRes.ok) {
+        initialWorkflow = await workflowRes.json();
+      }
+    } catch {
+      // Ignored fallback
+    }
+
     return {
       props: {
         user,
         initialProcess,
         initialSuppliers,
+        initialWorkflow,
         initialError: null,
       },
     };
@@ -116,17 +136,11 @@ export async function getServerSideProps(context) {
 }
 
 const WORKFLOW_STEPS = [
-  { key: "DRAFT", label: "Rascunho & DFD", icon: "edit_document" },
-  { key: "IN_ANALYSIS", label: "Em Análise", icon: "manage_search" },
-  { key: "PRICE_RESEARCH", label: "Pesquisa de Preços", icon: "request_quote" },
-  {
-    key: "SUPPLIER_SELECTED",
-    label: "Fornecedor Selecionado",
-    icon: "verified_user",
-  },
+  { key: "DRAFT", label: "Rascunho", icon: "edit_document" },
+  { key: "IN_ANALYSIS", label: "Análise Técnica", icon: "manage_search" },
   {
     key: "AWAITING_APPROVAL",
-    label: "Aguardando Aprovação",
+    label: "Aprovação Interna",
     icon: "hourglass_top",
   },
   { key: "APPROVED", label: "Aprovado", icon: "fact_check" },
@@ -171,9 +185,8 @@ const MODULE_TABS = [
   },
   {
     id: "approvals",
-    label: "Aprovação e Publicação",
+    label: "Análise & Decisão",
     icon: "fact_check",
-    phaseBadge: "Fase 4/5",
   },
   {
     id: "history",
@@ -190,6 +203,7 @@ const labelClasses = "mb-1 block font-label-md text-on-surface";
 
 function WorkflowStepper({ currentStatus }) {
   const isRejected = currentStatus === "REJECTED";
+  const isReturned = currentStatus === "RETURNED_FOR_ADJUSTMENT";
   const currentIndex = WORKFLOW_STEPS.findIndex((s) => s.key === currentStatus);
 
   return (
@@ -203,15 +217,21 @@ function WorkflowStepper({ currentStatus }) {
             Processo Rejeitado na Etapa de Aprovação
           </span>
         )}
+        {isReturned && (
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-label-sm font-bold text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200">
+            Devolvido para Ajustes do Solicitante
+          </span>
+        )}
       </div>
 
       <ol
         aria-label="Etapas do fluxo do processo"
-        className="grid grid-cols-2 gap-xs sm:grid-cols-4 lg:grid-cols-7"
+        className="grid grid-cols-2 gap-xs sm:grid-cols-5"
       >
         {WORKFLOW_STEPS.map((step, index) => {
-          const isCompleted = !isRejected && currentIndex > index;
-          const isActive = !isRejected && currentIndex === index;
+          const isCompleted =
+            !isRejected && !isReturned && currentIndex > index;
+          const isActive = !isRejected && !isReturned && currentIndex === index;
 
           return (
             <li
@@ -246,11 +266,18 @@ export default function ProcessDetailPage({
   user,
   initialProcess,
   initialSuppliers = [],
+  initialWorkflow = null,
   initialError,
 }) {
+  const router = useRouter();
   const [processData, setProcessData] = useState(initialProcess);
   const [suppliers, setSuppliers] = useState(initialSuppliers || []);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [workflowState, setWorkflowState] = useState(initialWorkflow);
+  const [tabOverride, setTabOverride] = useState(null);
+  const activeTab =
+    tabOverride ||
+    (typeof router.query.tab === "string" ? router.query.tab : "overview");
+  const setActiveTab = (tab) => setTabOverride(tab);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editErrors, setEditErrors] = useState({});
@@ -259,10 +286,17 @@ export default function ProcessDetailPage({
   const refreshProcessData = async () => {
     if (!processData?.id) return;
     try {
-      const res = await fetch(`/api/v1/processes/${processData.id}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [pRes, wRes] = await Promise.all([
+        fetch(`/api/v1/processes/${processData.id}`),
+        fetch(`/api/v1/processes/${processData.id}/workflow`),
+      ]);
+      if (pRes.ok) {
+        const data = await pRes.json();
         setProcessData(data);
+      }
+      if (wRes.ok) {
+        const wData = await wRes.json();
+        setWorkflowState(wData);
       }
     } catch {
       // Ignored
@@ -1685,44 +1719,26 @@ export default function ProcessDetailPage({
             </div>
           )}
 
-          {/* Subsequent Module Placeholder: Approvals (Fase 4/5) */}
+          {/* Tab Panel: Approvals & Workflow */}
           {activeTab === "approvals" && (
             <div
               id="tabpanel-approvals"
               role="tabpanel"
               aria-labelledby="tab-approvals"
-              className="rounded-xl border border-outline-variant/70 bg-surface-container-lowest p-lg text-center"
             >
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                <span
-                  aria-hidden="true"
-                  className="material-symbols-outlined text-3xl text-primary"
-                >
-                  gavel
-                </span>
-              </div>
-              <h2 className="mt-sm font-headline-sm font-bold text-on-surface">
-                Aprovação e Publicação
-              </h2>
-              <p className="mx-auto mt-xs max-w-lg font-body-md text-on-surface-variant">
-                Este módulo integrará as etapas finais de aprovação interna pela
-                autoridade competente e publicação (Fases 4 e 5).
-              </p>
-              <div className="mt-md">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("overview")}
-                  className="inline-flex items-center gap-xs rounded-lg border border-outline-variant bg-surface-container-low px-md py-2 font-label-md text-on-surface transition-colors hover:border-primary hover:text-primary"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="material-symbols-outlined text-base"
-                  >
-                    arrow_back
-                  </span>
-                  Voltar para Visão Geral e DFD
-                </button>
-              </div>
+              <ApprovalWorkflowTab
+                processId={processData.id}
+                processStatus={processData.status}
+                workflowState={workflowState}
+                user={user}
+                onWorkflowActionSuccess={(msg) => {
+                  setFeedbackBanner({
+                    type: "success",
+                    message: msg,
+                  });
+                  refreshProcessData();
+                }}
+              />
             </div>
           )}
         </div>

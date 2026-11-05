@@ -13,6 +13,7 @@ export const EDITABLE_QUOTATION_STATUSES = [
   "IN_ANALYSIS",
   "PRICE_RESEARCH",
   "SUPPLIER_SELECTED",
+  "RETURNED_FOR_ADJUSTMENT",
 ];
 
 export const LOCKED_QUOTATION_STATUSES = [
@@ -30,6 +31,11 @@ export function canUserManageQuotations(user, processRecord) {
     return false;
   }
 
+  // During active analysis, ADMIN is strictly read-only
+  if (processRecord.status === "IN_ANALYSIS" && user.role === "ADMIN") {
+    return false;
+  }
+
   if (user.role === "ADMIN") return true;
 
   if (user.role === "AGENTE_CONTRATACAO") {
@@ -44,9 +50,9 @@ export function canUserManageQuotations(user, processRecord) {
   }
 
   if (user.role === "SOLICITANTE") {
-    // Solicitante can only register quotes while process is still in DRAFT
+    // Solicitante can manage quotes in DRAFT or RETURNED_FOR_ADJUSTMENT
     if (
-      processRecord.status === "DRAFT" &&
+      ["DRAFT", "RETURNED_FOR_ADJUSTMENT"].includes(processRecord.status) &&
       processRecord.requesterId === user.id
     ) {
       return true;

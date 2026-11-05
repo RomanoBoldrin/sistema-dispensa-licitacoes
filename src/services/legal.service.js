@@ -12,7 +12,10 @@ import {
   identifyHypothesis,
   validateLegalClassification,
 } from "@/domain/legal-classification.js";
-import { canUserEditProcess, isValidUuid } from "./process.service.js";
+import {
+  canUserModifyInstructionData,
+  isValidUuid,
+} from "./process.service.js";
 
 export {
   ANNUAL_THRESHOLDS,
@@ -59,12 +62,12 @@ export async function updateProcessLegalClassification(
     });
   }
 
-  if (!canUserEditProcess(user, existingProcess)) {
+  if (!canUserModifyInstructionData(user, existingProcess)) {
     throw new ForbiddenError({
       message:
         "Você não tem autorização para atualizar o enquadramento deste processo.",
       action:
-        "Somente o solicitante ou agente do departamento pode editar processos em rascunho.",
+        "Somente o solicitante ou agente do departamento pode editar processos em rascunho ou durante a análise técnica.",
     });
   }
 

@@ -26,14 +26,21 @@ enum ProcessStatus {
   PRICE_RESEARCH
   SUPPLIER_SELECTED
   AWAITING_APPROVAL
+  RETURNED_FOR_ADJUSTMENT
   REJECTED
   APPROVED
   COMPLETED
 }
 
+enum ApprovalStage {
+  ANALYSIS
+  APPROVAL
+}
+
 enum ApprovalDecision {
   APPROVED
   REJECTED
+  ADJUSTMENT_REQUESTED
 }
 
 enum DocumentType {
@@ -79,6 +86,10 @@ enum AuditAction {
   LEGAL_CLASSIFICATION_UPDATED
   PRICE_JUSTIFICATION_UPDATED
   SUPPLIER_JUSTIFICATION_UPDATED
+  APPROVAL_TASK_ASSIGNED
+  APPROVAL_STAGE_APPROVED
+  PROCESS_ADJUSTMENT_REQUESTED
+  PROCESS_RESUBMITTED
 }
 
 // ─────────────────────────────────────────────
@@ -353,18 +364,23 @@ model Approval {
   processId String  @db.Uuid
   process   Process @relation(fields: [processId], references: [id])
 
-  userId String @db.Uuid
-  user   User   @relation(fields: [userId], references: [id])
+  stage        ApprovalStage
+  assignedRole UserRole
+  cycle        Int           @default(1)
 
-  decision ApprovalDecision
+  userId   String?           @db.Uuid
+  user     User?             @relation(fields: [userId], references: [id])
+  decision ApprovalDecision?
   comment  String?
 
+  decidedAt DateTime?
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
-  @@index([processId])
+  @@index([processId, cycle])
+  @@index([assignedRole, decision])
+  @@index([stage, decision])
   @@index([userId])
-  @@index([decision])
 }
 
 // ─────────────────────────────────────────────
@@ -382,6 +398,8 @@ model AuditLog {
 
   action      AuditAction
   description String?
+  fromStatus  ProcessStatus?
+  toStatus    ProcessStatus?
 
   createdAt DateTime  @default(now())
   deletedAt DateTime?
