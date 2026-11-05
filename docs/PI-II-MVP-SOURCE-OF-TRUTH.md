@@ -9,9 +9,9 @@
 > owner, the current Prisma data model, known gaps, architectural
 > decisions, and the recommended implementation sequence.
 >
-> **Last updated:** 2026-11-04\
+> **Last updated:** 2026-11-05\
 > **Project:** `sistema-dispensa-licitacoes-js`\
-> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), and Phase 2 (Procurement Preparation — Suppliers, Quotations, Comparative Price Map, Document Storage & Process Detail Integration) are completed and verified (15/15 test suites passed, 127/127 tests passed). Next priority is Phase 3 (Legal Classification, Justifications & Submission Workflow).
+> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), and Phase 3 (Legal Classification, Justifications & Submission Workflow) are completed and verified (20/20 test suites passed, 185/185 tests passed). Next priority is Phase 4 (Internal Analysis and Approval Workflow).
 
 ---
 
@@ -872,19 +872,23 @@ Tasks:
 **Goal:** let the requester complete and submit a formally instructed
 process.
 
-Tasks: - \[ \] Define the legal hypotheses and checklist from the
-project's approved requirements. - \[ \] Implement legal classification
-and server-side basic validation. - \[ \] Record the price
-justification. - \[ \] Record the supplier-selection justification. - \[
-\] Validate required fields and documents before submission. - \[ \]
-Implement the process summary/review screen. - \[ \] Implement
-submission as a domain operation. - \[ \] Prevent unauthorized or
-invalid edits after submission. - \[ \] Record submission and status
-transition in history/audit. - \[ \] Add tests for valid and invalid
-submission scenarios.
+Tasks:
+
+- [x] Define the legal hypotheses and checklist from the project's approved requirements (Lei nº 14.133/2021 Article 75, Decretos nº 11.871/2023, 12.343/2024, 12.807/2025).
+- [x] Implement legal classification and server-side basic validation (`src/domain/legal-classification.js`, `src/services/legal.service.js`).
+- [x] Record the price justification (`priceJustification` in DB + API/UI).
+- [x] Record the supplier-selection justification (`supplierJustification` in DB + API/UI).
+- [x] Enforce formal supplier selection (`selectedSupplierId`) with quotation verification on the process.
+- [x] Validate required fields and documents before submission (`validateProcessCompleteness` in `src/services/submission.service.js`).
+- [x] Implement the process summary/review screen (`ProcessReviewTab.jsx` with 7-point readiness checklist, executive summary, and submission confirmation modal).
+- [x] Implement submission as a domain operation (`submitProcess` atomically transitioning `DRAFT`/`PRICE_RESEARCH`/`SUPPLIER_SELECTED` to `AWAITING_APPROVAL`).
+- [x] Prevent unauthorized or invalid edits after submission (`canEdit` false when not in draft/research states, locked on backend).
+- [x] Record submission and status transition in history/audit (`AuditAction.PROCESS_SUBMITTED`, `LEGAL_CLASSIFICATION_UPDATED`, `PRICE_JUSTIFICATION_UPDATED`, `SUPPLIER_JUSTIFICATION_UPDATED`).
+- [x] Add tests for valid and invalid submission scenarios (unit tests for domain rules, submission service, justifications; integration tests for `/submit` and `/legal-classification`).
 
 **Exit criterion:** a requester can complete the documented wizard,
 review the summary, and submit a valid process for internal analysis.
+Demonstrably achieved on 2026-11-05 (20/20 test suites passed, 185/185 tests passed).
 
 ### Phase 4 --- Internal analysis and approval workflow
 
@@ -1149,21 +1153,65 @@ Phase 2 has been fully implemented, tested, and verified on branch `feat/procure
 
 ---
 
-### 14.2 Next Priority: Phase 3 — Legal Classification, Justifications & Submission
+### 14.3 Phase 3 Implementation Summary (2026-11-05)
 
-With Phase 2 complete, the next phase will implement:
+Phase 3 delivered the legal classification engine, formal justifications, supplier selection enforcement, and the atomic process submission workflow:
 
-1. Legal classification under Lei nº 14.133/2021 Article 75 (dispensa por valor ou emergência/outros incisos).
-2. Price justification and supplier selection justification records.
-3. Supplier selection decision by authorized staff (`AGENTE_CONTRATACAO` / `ADMIN`).
-4. Process submission workflow (`DRAFT` / `PRICE_RESEARCH` -> `AWAITING_APPROVAL`).
+1. **Authoritative Legal Sources & Annual Decrees:**
+   - Consolidated text of **Lei nº 14.133/2021, Art. 75** (Diretoria de Informação Legislativa / Portal da Legislação da Presidência da República).
+   - Annual threshold adjustment decrees pursuant to Art. 182:
+     - **Decreto nº 11.871/2023** (effective 01/01/2024): Inciso I = R$ 119.812,02; Inciso II = R$ 59.906,02.
+     - **Decreto nº 12.343/2024** (effective 01/01/2025): Inciso I = R$ 125.451,15; Inciso II = R$ 62.725,59.
+     - **Decreto nº 12.807/2025** (effective 01/01/2026): Inciso I = R$ 130.984,20; Inciso II = R$ 65.492,11.
+   - Situational hypotheses supported: Inciso III (unsuccessful procurement / licitação deserta/fracassada), Inciso IV (operational emergency / emergência/calamidade), Inciso VII (commercial defense / intervenção no domínio econômico), Inciso VIII (contracting public entities), Inciso IX (national security / segurança nacional), Inciso XI (perishable goods / hortifrutigranjeiros).
+   - Clear distinction between **Hard Blocking Errors** (e.g. estimated value exceeding applicable monetary threshold), **Advisory Warnings** (e.g. fewer than 3 registered quotations, selected quotation is not the lowest quote), and **Human Review Items** (legal compliance disclosure explicitly stating human legal opinion is mandatory).
+
+2. **Database Migration:**
+   - Migration `20261105010000_phase_3_legal_justifications_submission` added `legalJustification` and `priceJustification` (nullable `TEXT`) to `Process`.
+   - Extended `AuditAction` enum with `LEGAL_CLASSIFICATION_UPDATED`, `PRICE_JUSTIFICATION_UPDATED`, and `SUPPLIER_JUSTIFICATION_UPDATED`.
+
+3. **Domain & Application Services:**
+   - `src/domain/legal-classification.js`: Pure JavaScript domain rules, decree thresholds, hypothesis metadata, and validation routines without Node/DB dependencies, safe for both client and server.
+   - `src/services/legal.service.js`: Domain service coordinating legal classification persistence and audit trail logging.
+   - `src/services/submission.service.js`: Process completeness validation engine (`validateProcessCompleteness`) checking 7 distinct process dimensions (Basic Information, DFD, Legal Classification, Price Research, Justifications, Supplier Selection, and Documents). Atomic submission transaction (`submitProcess`) transitioning status (`DRAFT` / `PRICE_RESEARCH` / `SUPPLIER_SELECTED` -> `AWAITING_APPROVAL`) and logging `PROCESS_SUBMITTED`.
+   - `src/services/process.service.js`: Updated to handle justifications, supplier selection authorization (`canUserSelectSupplier`, requiring selected supplier to have a quotation on the process), and root-level permission serialization.
+
+4. **Dedicated REST API Endpoints:**
+   - `PUT /api/v1/processes/:processId/legal-classification`: Updates legal basis and justification with validation.
+   - `PUT /api/v1/processes/:processId/justifications`: Updates price and supplier justifications with audit logging.
+   - `PUT /api/v1/processes/:processId/supplier`: Formally selects supplier from quotations on the process.
+   - `POST /api/v1/processes/:processId/submit`: Validates completeness and executes atomic submission.
+
+5. **User Interface Components & UI Hardening:**
+   - `LegalClassificationTab.jsx`: Hypothesis selection, threshold verification table, dynamic error/warning/human review disclosures, and justification input.
+   - `JustificationsTab.jsx`: Supplier selection with quote comparison highlight, lowest-quote advisory indicator, and separate price/supplier justification fields.
+   - `ProcessReviewTab.jsx`: Comprehensive executive summary, interactive 7-point readiness checklist with pending items, and submission modal with legal disclaimer.
+   - `QuotationFormModal.jsx` & `SupplierFormModal.jsx`: Hardened responsive modal dialog layout fixing a Tailwind CSS v4 spacing token collision on `max-w-lg`, added background blur backdrop (`bg-black/50 backdrop-blur-sm`), vertical scrolling (`max-h-[90vh] overflow-y-auto`), and backdrop/Escape dismiss.
+   - **Brazilian Phone Masking & Normalization:** Implemented live dynamic telephone masking in `SupplierFormModal.jsx` (supporting 10-digit landline `(XX) XXXX-XXXX` and 11-digit mobile `(XX) XXXXX-XXXX`, stripping `+55` international prefixes) via `formatPhone` and `normalizePhone` in `dashboardUtils.js`, with consistent masked formatting across `SupplierManagementTab.jsx` and `JustificationsTab.jsx`.
+   - Integrated seamlessly into Process Detail tabs at `/processes/[processId]`.
+
+6. **Quality Assurance & Verification:**
+   - 20/20 test suites passing (185/185 tests: 94 unit tests, 91 integration tests).
+   - Next.js production build (`npm run build`) compiles cleanly without bundle leakage.
+   - Code style verified with 100% compliance across `npm run lint:eslint:check` and `npm run lint:prettier:check`.
+
+---
+
+### 14.4 Next Priority: Phase 4 — Internal Analysis and Approval Workflow
+
+With Phase 3 complete, the next phase will implement:
+
+1. Workflow stages and responsible roles (`AGENTE_CONTRATACAO`, `ANALISTA`, `AUTORIDADE_COMPETENTE`).
+2. Internal analysis inbox for assigned/pending processes in `AWAITING_APPROVAL` status.
+3. Analysis view with stage progression: Approve, Request Adjustment (return to requester), Reject/Close.
+4. Historical and audit tracking of reviewer decisions, formal opinions, and approval chains.
 
 ---
 
 ## 15. Source-of-truth and maintenance policy
 
 This document consolidates the requirements and planning available on
-2026-11-04. It is not a substitute for inspecting the live repository.
+2026-11-05. It is not a substitute for inspecting the live repository.
 
 When implementation changes:
 
@@ -1179,4 +1227,4 @@ When implementation changes:
 - Keep legal requirements and external integration behavior current
   and independently verified.
 
-**Current overall status:** Phase 0 (Repository audit and alignment), Phase 1 (Process foundation), and Phase 2 (Procurement preparation — suppliers, quotations, comparative price map, documents, Process Detail integration, and comprehensive test coverage) are **COMPLETE**. The next priority is **Phase 3: Legal Classification, Justifications & Submission Workflow**.
+**Current overall status:** Phase 0 (Repository audit and alignment), Phase 1 (Process foundation), Phase 2 (Procurement preparation), and Phase 3 (Legal Classification, Justifications & Submission Workflow) are **COMPLETE**. The next priority is **Phase 4: Internal Analysis and Approval Workflow**.

@@ -9,10 +9,15 @@ import {
   DOCUMENT_TYPE_LABELS,
   canUserManageDocuments,
 } from "./document.service.js";
+import { validateLegalClassification } from "./legal.service.js";
 import {
   buildComparativePriceMap,
   canUserManageQuotations,
 } from "./quotation.service.js";
+import {
+  canUserSubmitProcess,
+  validateProcessCompleteness,
+} from "./submission.service.js";
 
 export const ALLOWED_CREATE_ROLES = [
   "ADMIN",
@@ -59,7 +64,6 @@ const PROTECTED_UPDATE_FIELDS = [
   "department",
   "selectedSupplierId",
   "selectedSupplier",
-  "supplierJustification",
   "createdAt",
   "updatedAt",
   "deletedAt",
@@ -105,6 +109,8 @@ const PROCESS_DETAIL_SELECT = {
     },
   },
   supplierJustification: true,
+  legalJustification: true,
+  priceJustification: true,
   demandDocument: true,
   quotations: {
     orderBy: {
@@ -219,6 +225,44 @@ export function canUserEditProcess(user, processRecord) {
   }
 
   return true;
+}
+
+export function canUserSelectSupplier(user, processRecord) {
+  if (!user || !processRecord) return false;
+  if (processRecord.deletedAt) return false;
+  if (
+    ["AWAITING_APPROVAL", "APPROVED", "COMPLETED", "REJECTED"].includes(
+      processRecord.status,
+    )
+  ) {
+    return false;
+  }
+  if (user.role === "ADMIN") return true;
+  if (user.role === "AGENTE_CONTRATACAO") {
+    if (
+      user.departmentId &&
+      processRecord.departmentId !== user.departmentId &&
+      processRecord.requesterId !== user.id
+    ) {
+      return false;
+    }
+    return true;
+  }
+  if (user.role === "SOLICITANTE") {
+    if (
+      processRecord.status === "DRAFT" &&
+      processRecord.requesterId === user.id
+    ) {
+      if (
+        user.departmentId &&
+        processRecord.departmentId !== user.departmentId
+      ) {
+        return false;
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 function validateEstimatedValue(estimatedValue) {
@@ -377,6 +421,8 @@ function serializeProcessDetail(processRecord, user) {
     selectedSupplierId: processRecord.selectedSupplierId ?? null,
     selectedSupplier: processRecord.selectedSupplier ?? null,
     supplierJustification: processRecord.supplierJustification ?? null,
+    legalJustification: processRecord.legalJustification ?? null,
+    priceJustification: processRecord.priceJustification ?? null,
     createdAt: processRecord.createdAt.toISOString(),
     updatedAt: processRecord.updatedAt.toISOString(),
     demandDocument: serializeDemandDocument(processRecord.demandDocument),
@@ -440,6 +486,8 @@ function serializeProcessDetail(processRecord, user) {
             : null,
         }))
       : [],
+    legalValidation: validateLegalClassification(processRecord),
+    completeness: validateProcessCompleteness(processRecord),
     permissions: user
       ? {
           canEdit: canUserEditProcess(user, processRecord),
@@ -447,6 +495,10 @@ function serializeProcessDetail(processRecord, user) {
           canManageDocuments: canUserManageDocuments(user, processRecord),
         }
       : undefined,
+    canSubmit: user ? canUserSubmitProcess(user, processRecord) : false,
+    canSelectSupplier: user
+      ? canUserSelectSupplier(user, processRecord)
+      : false,
   };
 }
 
@@ -1203,6 +1255,27 @@ async function updateProcess(processId, body, user) {
     );
   }
 
+  if (body.legalJustification !== undefined) {
+    processUpdateData.legalJustification = validateOptionalString(
+      body.legalJustification,
+      "legalJustification",
+    );
+  }
+
+  if (body.priceJustification !== undefined) {
+    processUpdateData.priceJustification = validateOptionalString(
+      body.priceJustification,
+      "priceJustification",
+    );
+  }
+
+  if (body.supplierJustification !== undefined) {
+    processUpdateData.supplierJustification = validateOptionalString(
+      body.supplierJustification,
+      "supplierJustification",
+    );
+  }
+
   if (body.estimatedValue !== undefined) {
     processUpdateData.estimatedValue = validateEstimatedValue(
       body.estimatedValue,
@@ -1379,14 +1452,63 @@ async function updateProcess(processId, body, user) {
     }
 
     if (hasProcessChanges) {
-      await tx.auditLog.create({
-        data: {
-          processId: existingProcess.id,
-          userId: user.id,
-          action: "PROCESS_UPDATED",
-          description: "Dados gerais do processo atualizados.",
-        },
-      });
+      if (processUpdateData.priceJustification !== undefined) {
+        await tx.auditLog.create({
+          data: {
+            processId: existingProcess.id,
+            userId: user.id,
+            action: "PRICE_JUSTIFICATION_UPDATED",
+            description: "Justificativa de preço registrada/atualizada.",
+          },
+        });
+      }
+
+      if (processUpdateData.supplierJustification !== undefined) {
+        await tx.auditLog.create({
+          data: {
+            processId: existingProcess.id,
+            userId: user.id,
+            action: "SUPPLIER_JUSTIFICATION_UPDATED",
+            description: "Justificativa da escolha do fornecedor atualizada.",
+          },
+        });
+      }
+
+      if (
+        processUpdateData.legalBasis !== undefined ||
+        processUpdateData.legalJustification !== undefined
+      ) {
+        await tx.auditLog.create({
+          data: {
+            processId: existingProcess.id,
+            userId: user.id,
+            action: "LEGAL_CLASSIFICATION_UPDATED",
+            description:
+              "Enquadramento legal / fundamentação jurídica atualizada.",
+          },
+        });
+      }
+
+      const generalFields = [
+        "title",
+        "object",
+        "description",
+        "estimatedValue",
+      ];
+      const hasOtherGeneralChanges = generalFields.some(
+        (f) => processUpdateData[f] !== undefined,
+      );
+
+      if (hasOtherGeneralChanges) {
+        await tx.auditLog.create({
+          data: {
+            processId: existingProcess.id,
+            userId: user.id,
+            action: "PROCESS_UPDATED",
+            description: "Dados gerais do processo atualizados.",
+          },
+        });
+      }
     }
 
     return await tx.process.update({
@@ -1399,13 +1521,234 @@ async function updateProcess(processId, body, user) {
   return serializeProcessDetail(updatedProcess, user);
 }
 
+/**
+ * Formally selects or proposes a supplier for a process and records the selection justification.
+ * Enforces that the supplier has a quotation registered on the process.
+ */
+async function selectProcessSupplier(processId, body, user) {
+  if (!isValidUuid(processId)) {
+    throw new ValidationError({
+      message: "Formato inválido para processId.",
+      action: "Forneça um UUID válido para processId.",
+    });
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new ValidationError({
+      message: "Corpo da requisição inválido.",
+      action: "Envie um objeto JSON com supplierId e justificativa opcional.",
+    });
+  }
+
+  const { supplierId, supplierJustification } = body;
+  if (!isValidUuid(supplierId)) {
+    throw new ValidationError({
+      message: "Formato inválido para supplierId.",
+      action: "Forneça um UUID válido para supplierId.",
+    });
+  }
+
+  const existingProcess = await prisma.process.findFirst({
+    where: {
+      id: processId.trim(),
+      deletedAt: null,
+    },
+    include: {
+      quotations: {
+        include: {
+          supplier: true,
+        },
+      },
+    },
+  });
+
+  if (!existingProcess) {
+    throw new NotFoundError({
+      message: "Processo não encontrado.",
+      action: "Verifique o identificador do processo.",
+    });
+  }
+
+  if (!canUserSelectSupplier(user, existingProcess)) {
+    throw new ForbiddenError({
+      message:
+        "Você não tem autorização para selecionar o fornecedor deste processo.",
+      action:
+        "Apenas administradores, agentes de contratação ou o solicitante em rascunho podem selecionar o fornecedor.",
+    });
+  }
+
+  const matchingQuotation = existingProcess.quotations.find(
+    (q) => q.supplierId === supplierId.trim(),
+  );
+
+  if (!matchingQuotation) {
+    throw new ValidationError({
+      message:
+        "O fornecedor selecionado deve possuir uma cotação registrada neste processo.",
+      action: "Cadastre uma cotação para o fornecedor antes de selecioná-lo.",
+    });
+  }
+
+  const normalizedSupplierJustification =
+    supplierJustification !== undefined && supplierJustification !== null
+      ? String(supplierJustification).trim() || null
+      : existingProcess.supplierJustification;
+
+  const supplierName =
+    matchingQuotation.supplier?.tradeName ||
+    matchingQuotation.supplier?.legalName ||
+    "Fornecedor";
+
+  const updatedProcess = await prisma.$transaction(async (tx) => {
+    const updated = await tx.process.update({
+      where: { id: existingProcess.id },
+      data: {
+        selectedSupplierId: supplierId.trim(),
+        supplierJustification: normalizedSupplierJustification,
+      },
+      select: PROCESS_DETAIL_SELECT,
+    });
+
+    await tx.auditLog.create({
+      data: {
+        processId: existingProcess.id,
+        userId: user.id,
+        action: "SUPPLIER_SELECTED",
+        description: `Fornecedor ${supplierName} (${matchingQuotation.supplier?.cnpj || ""}) selecionado para a contratação.`,
+      },
+    });
+
+    if (
+      supplierJustification !== undefined &&
+      supplierJustification !== null &&
+      String(supplierJustification).trim()
+    ) {
+      await tx.auditLog.create({
+        data: {
+          processId: existingProcess.id,
+          userId: user.id,
+          action: "SUPPLIER_JUSTIFICATION_UPDATED",
+          description:
+            "Justificativa da escolha do fornecedor registrada/atualizada.",
+        },
+      });
+    }
+
+    return updated;
+  });
+
+  return serializeProcessDetail(updatedProcess, user);
+}
+
+/**
+ * Updates formal justifications (price justification and/or supplier selection justification).
+ */
+async function updateProcessJustifications(processId, body, user) {
+  if (!isValidUuid(processId)) {
+    throw new ValidationError({
+      message: "Formato inválido para processId.",
+      action: "Forneça um UUID válido para processId.",
+    });
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new ValidationError({
+      message: "Corpo da requisição inválido.",
+      action:
+        "Envie um objeto JSON com priceJustification e/ou supplierJustification.",
+    });
+  }
+
+  const existingProcess = await prisma.process.findFirst({
+    where: {
+      id: processId.trim(),
+      deletedAt: null,
+    },
+  });
+
+  if (!existingProcess) {
+    throw new NotFoundError({
+      message: "Processo não encontrado.",
+      action: "Verifique o identificador do processo.",
+    });
+  }
+
+  if (!canUserEditProcess(user, existingProcess)) {
+    throw new ForbiddenError({
+      message:
+        "Você não tem autorização para atualizar justificativas deste processo.",
+      action:
+        "Apenas usuários autorizados podem editar justificativas em rascunho.",
+    });
+  }
+
+  const { priceJustification, supplierJustification } = body;
+  if (priceJustification === undefined && supplierJustification === undefined) {
+    throw new ValidationError({
+      message: "Nenhuma justificativa fornecida para atualização.",
+      action: "Forneça priceJustification e/ou supplierJustification.",
+    });
+  }
+
+  const updateData = {};
+  if (priceJustification !== undefined) {
+    updateData.priceJustification = validateOptionalString(
+      priceJustification,
+      "priceJustification",
+    );
+  }
+  if (supplierJustification !== undefined) {
+    updateData.supplierJustification = validateOptionalString(
+      supplierJustification,
+      "supplierJustification",
+    );
+  }
+
+  const updatedProcess = await prisma.$transaction(async (tx) => {
+    if (updateData.priceJustification !== undefined) {
+      await tx.auditLog.create({
+        data: {
+          processId: existingProcess.id,
+          userId: user.id,
+          action: "PRICE_JUSTIFICATION_UPDATED",
+          description: "Justificativa de preços registrada/atualizada.",
+        },
+      });
+    }
+
+    if (updateData.supplierJustification !== undefined) {
+      await tx.auditLog.create({
+        data: {
+          processId: existingProcess.id,
+          userId: user.id,
+          action: "SUPPLIER_JUSTIFICATION_UPDATED",
+          description: "Justificativa da escolha do fornecedor atualizada.",
+        },
+      });
+    }
+
+    return await tx.process.update({
+      where: { id: existingProcess.id },
+      data: updateData,
+      select: PROCESS_DETAIL_SELECT,
+    });
+  });
+
+  return serializeProcessDetail(updatedProcess, user);
+}
+
 const processService = {
   createProcess,
   listProcesses,
   getProcessById,
   updateProcess,
+  selectProcessSupplier,
+  updateProcessJustifications,
   canUserAccessProcess,
   canUserEditProcess,
+  canUserSelectSupplier,
+  canUserSubmitProcess,
   isValidUuid,
   PROCESS_STATUSES,
   OBJECT_CATEGORIES,

@@ -11,6 +11,8 @@ import {
   formatDate,
   formatDateTime,
   formatProcessNumber,
+  formatPhone,
+  normalizePhone,
 } from "@/components/dashboard/dashboardUtils";
 import processService from "@/services/process.service.js";
 
@@ -53,6 +55,38 @@ describe("Dashboard Utilities", () => {
 
     test("handles missing values", () => {
       expect(formatProcessNumber(null, null)).toBe("DP-—/—");
+    });
+  });
+
+  describe("formatPhone and normalizePhone", () => {
+    test("normalizes Brazilian phone numbers by removing non-digits and leading +55", () => {
+      expect(normalizePhone("(11) 98765-4321")).toBe("11987654321");
+      expect(normalizePhone("+55 (11) 98765-4321")).toBe("11987654321");
+      expect(normalizePhone("+55 11 3456-7890")).toBe("1134567890");
+      expect(normalizePhone(null)).toBe("");
+      expect(normalizePhone(undefined)).toBe("");
+    });
+
+    test("formats 11-digit mobile phones to (XX) XXXXX-XXXX", () => {
+      expect(formatPhone("11987654321")).toBe("(11) 98765-4321");
+      expect(formatPhone("(11) 98765-4321")).toBe("(11) 98765-4321");
+    });
+
+    test("formats 10-digit landline phones to (XX) XXXX-XXXX", () => {
+      expect(formatPhone("1134567890")).toBe("(11) 3456-7890");
+    });
+
+    test("formats partial inputs progressively while typing", () => {
+      expect(formatPhone("11")).toBe("(11");
+      expect(formatPhone("119")).toBe("(11) 9");
+      expect(formatPhone("119876")).toBe("(11) 9876");
+      expect(formatPhone("1198765")).toBe("(11) 9876-5");
+    });
+
+    test("handles empty and null phone gracefully", () => {
+      expect(formatPhone("")).toBe("");
+      expect(formatPhone(null)).toBe("");
+      expect(formatPhone(undefined)).toBe("");
     });
   });
 

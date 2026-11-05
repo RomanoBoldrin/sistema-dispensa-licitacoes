@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function QuotationFormContent({
   onClose,
@@ -72,7 +72,7 @@ function QuotationFormContent({
   const labelClasses = "block font-label-sm font-semibold text-on-surface mb-1";
 
   return (
-    <div className="w-full max-w-lg rounded-2xl border border-outline-variant/80 bg-surface-container-lowest p-md shadow-xl sm:p-lg">
+    <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-outline-variant/80 bg-surface-container-lowest p-md shadow-xl sm:p-lg">
       <div className="flex items-center justify-between border-b border-outline-variant/50 pb-sm">
         <div className="flex items-center gap-xs">
           <span
@@ -261,6 +261,19 @@ export default function QuotationFormModal({
   suppliers = [],
   onOpenSupplierModal,
 }) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -268,7 +281,12 @@ export default function QuotationFormModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="quotation-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/40 p-sm backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-sm backdrop-blur-sm"
     >
       <QuotationFormContent
         key={initialData?.id || "new-quotation"}

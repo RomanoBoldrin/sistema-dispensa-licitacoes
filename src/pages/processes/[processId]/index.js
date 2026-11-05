@@ -18,7 +18,10 @@ import {
   URGENCY_OPTIONS,
 } from "@/components/demand-formalization/DemandFormalizationWizard.jsx";
 import DocumentManagementTab from "@/components/procurement/DocumentManagementTab";
+import JustificationsTab from "@/components/procurement/JustificationsTab";
+import LegalClassificationTab from "@/components/procurement/LegalClassificationTab";
 import PriceResearchTab from "@/components/procurement/PriceResearchTab";
+import ProcessReviewTab from "@/components/procurement/ProcessReviewTab";
 import SupplierManagementTab from "@/components/procurement/SupplierManagementTab";
 
 export async function getServerSideProps(context) {
@@ -137,6 +140,11 @@ const MODULE_TABS = [
     icon: "description",
   },
   {
+    id: "legal",
+    label: "Enquadramento Legal",
+    icon: "gavel",
+  },
+  {
     id: "documents",
     label: "Documentos",
     icon: "folder_open",
@@ -152,9 +160,19 @@ const MODULE_TABS = [
     icon: "storefront",
   },
   {
+    id: "justifications",
+    label: "Justificativas & Escolha",
+    icon: "verified_user",
+  },
+  {
+    id: "review",
+    label: "Resumo & Submissão",
+    icon: "send",
+  },
+  {
     id: "approvals",
     label: "Aprovação e Publicação",
-    icon: "gavel",
+    icon: "fact_check",
     phaseBadge: "Fase 4/5",
   },
   {
@@ -1497,6 +1515,58 @@ export default function ProcessDetailPage({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab Panel: Legal Classification */}
+          {activeTab === "legal" && (
+            <div
+              id="tabpanel-legal"
+              role="tabpanel"
+              aria-labelledby="tab-legal"
+            >
+              <LegalClassificationTab
+                processData={processData}
+                canEdit={canEdit}
+                onUpdated={refreshProcessData}
+              />
+            </div>
+          )}
+
+          {/* Tab Panel: Justifications and Supplier Selection */}
+          {activeTab === "justifications" && (
+            <div
+              id="tabpanel-justifications"
+              role="tabpanel"
+              aria-labelledby="tab-justifications"
+            >
+              <JustificationsTab
+                processData={processData}
+                onUpdated={refreshProcessData}
+              />
+            </div>
+          )}
+
+          {/* Tab Panel: Process Review and Submission */}
+          {activeTab === "review" && (
+            <div
+              id="tabpanel-review"
+              role="tabpanel"
+              aria-labelledby="tab-review"
+            >
+              <ProcessReviewTab
+                processData={processData}
+                onNavigateTab={(tabId) => setActiveTab(tabId)}
+                onSubmitted={(result) => {
+                  refreshProcessData();
+                  setFeedbackBanner({
+                    type: "success",
+                    message:
+                      result.message ||
+                      "Processo submetido para análise interna com sucesso!",
+                  });
+                }}
+              />
             </div>
           )}
 

@@ -240,48 +240,68 @@ The service layer (`src/services/`) contains the application's business operatio
 Implemented and planned services include:
 
 ```text
-process.service.js      (Implemented — Phase 1)
-quotation.service.js    (Planned — Phase 2)
-supplier.service.js     (Planned — Phase 2)
-document.service.js     (Planned — Phase 2)
+process.service.js      (Implemented — Phases 1, 2, 3)
+quotation.service.js    (Implemented — Phase 2)
+supplier.service.js     (Implemented — Phase 2)
+document.service.js     (Implemented — Phase 2)
+legal.service.js        (Implemented — Phase 3)
+submission.service.js   (Implemented — Phase 3)
 approval.service.js     (Planned — Phase 4)
 ```
 
 ## `processService` (`src/services/process.service.js`)
 
-Implemented responsibilities (Phase 1):
+Implemented responsibilities (Phases 1–3):
 
 - **`createProcess(body, user)`**: Validates role (`ADMIN`, `SOLICITANTE`, `AGENTE_CONTRATACAO`), department authorization, process fields (`title`, `object`, `description`, `legalBasis`, `estimatedValue`), and DFD fields (`category`, `detailedJustification`, `technicalSpecifications`, `urgency`, `budgetSource`, `desiredDeadlineDays`, `responsibleName`, `responsibleEmail`). Allocates `(number, year)` safely on the server using a transaction-scoped PostgreSQL advisory lock (`pg_advisory_xact_lock`) and persists the `Process` (`DRAFT`), `DemandDocument`, and `AuditLog` (`PROCESS_CREATED`, `DEMAND_DOCUMENT_CREATED`) atomically.
 - **`listProcesses(query, user)`**: Scopes accessible processes by role and ownership (`SOLICITANTE` restricted to own processes and forbidden from querying other departments), applies server-side filters (`status`, `departmentId`, `year`, `createdFrom`, `createdTo`, `search`), and returns paginated summaries (`processes`, `data`, `meta`, `departments`).
 - **`getProcessById(processId, user)`**: Validates UUID format, enforces access control via `canUserAccessProcess`, and returns the process detail with explicit Prisma `select` projections (`department`, `requester`, `demandDocument`, `selectedSupplier`, `quotations`, `documents`, `approvals`, `auditLogs`, `permissions`).
 - **`updateProcess(processId, body, user)`**: Rejects protected fields (`status`, `number`, `year`, `requesterId`, `departmentId`, etc.) with `400 ValidationError`, enforces ownership/role authorization (`403 ForbiddenError`), enforces `DRAFT`-only editing (`409 ConflictError`), updates `Process` and `DemandDocument` atomically (`upsert` without duplicating DFD records), and writes `PROCESS_UPDATED` / `DEMAND_DOCUMENT_UPDATED` to `AuditLog`.
-- **Planned Phase 3+ operations**: `submitProcess`, workflow status transitions, and completion.
+- **`selectProcessSupplier(processId, supplierId, user)`**: Validates supplier selection authorization (`ADMIN`, `AGENTE_CONTRATACAO`, or `SOLICITANTE` on own draft), confirms the supplier has an active registered quotation for the process, updates `selectedSupplierId` and sets status to `SUPPLIER_SELECTED` if currently in `DRAFT`/`PRICE_RESEARCH`, and records an audit log.
+- **`updateProcessJustifications(processId, { priceJustification, supplierJustification }, user)`**: Validates justifications and records `PRICE_JUSTIFICATION_UPDATED` and `SUPPLIER_JUSTIFICATION_UPDATED` in `AuditLog`.
 
-## `QuotationService` (Planned — Phase 2)
-
-Responsibilities:
-
-- Add quotation
-- Update quotation
-- List quotations
-- Calculate reference price
-
-## `SupplierService` (Planned — Phase 2)
+## `QuotationService` (`src/services/quotation.service.js` — Implemented Phase 2)
 
 Responsibilities:
 
-- Create supplier
-- Search suppliers
-- Select supplier for process
+- Add quotation (`createQuotation`): Validates monetary amounts using exact integer cents, ensures unique supplier per process, recalculates process status to `PRICE_RESEARCH`.
+- Update quotation (`updateQuotation`): Updates quotation value, validity, and details.
+- List quotations (`listQuotations`): Returns registered quotations and comparative price map (`buildComparativePriceMap`).
+- Delete quotation (`deleteQuotation`): Soft-deletes quotation where permitted.
 
-## `DocumentService` (Planned — Phase 2)
+## `SupplierService` (`src/services/supplier.service.js` — Implemented Phase 2)
 
 Responsibilities:
 
-- Upload document metadata
-- Validate document requirements
-- List documents
-- Remove documents where permitted
+- Create supplier (`createSupplier`): Validates CNPJ / CPF, corporate name, email, phone.
+- Search suppliers (`listSuppliers`): Searches active suppliers by corporate name, trade name, or tax ID.
+- Retrieve supplier (`getSupplierById`): Returns supplier details.
+- Update supplier (`updateSupplier`): Updates supplier registration data.
+
+## `DocumentService` (`src/services/document.service.js` — Implemented Phase 2)
+
+Responsibilities:
+
+- Upload document metadata (`createDocument`): Validates file types, max sizes, and associates storage keys.
+- List documents (`listDocuments`): Returns document metadata organized by process and document types.
+- Delete document (`deleteDocument`): Soft-deletes document references.
+
+## `LegalService` (`src/services/legal.service.js` — Implemented Phase 3)
+
+Responsibilities:
+
+- Validates legal basis under Lei nº 14.133/2021 Article 75 (monetary thresholds adjusted by federal decrees Decretos nº 11.871/2023, 12.343/2024, 12.807/2025).
+- Separates hard errors (blocking), advisory warnings (non-blocking), and human review disclosures.
+- Updates legal basis and justification with `LEGAL_CLASSIFICATION_UPDATED` in `AuditLog`.
+
+## `SubmissionService` (`src/services/submission.service.js` — Implemented Phase 3)
+
+Responsibilities:
+
+- Evaluates 7 completeness dimensions: Basic Info, DFD, Legal Classification, Price Research, Justifications, Supplier Selection, and Documents.
+- Atomically transitions process status from `DRAFT`, `PRICE_RESEARCH`, or `SUPPLIER_SELECTED` to `AWAITING_APPROVAL`.
+- Records `PROCESS_SUBMITTED` in `AuditLog` within the same transaction.
+- Locks the process against further edits by standard requesters.
 
 ## `ApprovalService` (Planned — Phase 4)
 
@@ -433,55 +453,71 @@ The `PATCH /api/v1/processes/:processId` endpoint is restricted strictly to edit
 
 ---
 
-## Process Actions (Planned — Phases 3–5)
-
-Domain-specific workflow transitions will use explicit action endpoints rather than generic `PATCH` updates:
+## Quotations (Implemented — Phase 2)
 
 ```http
-POST /api/v1/processes/:processId/submit
-POST /api/v1/processes/:processId/submit-for-approval
-POST /api/v1/processes/:processId/approve
-POST /api/v1/processes/:processId/reject
-POST /api/v1/processes/:processId/complete
+GET    /api/v1/processes/:processId/quotations
+POST   /api/v1/processes/:processId/quotations
+DELETE /api/v1/processes/:processId/quotations/:quotationId
 ```
 
 ---
 
-## Quotations (Planned — Phase 2)
+## Suppliers (Implemented — Phase 2)
 
 ```http
-GET  /api/v1/processes/:processId/quotations
-POST /api/v1/processes/:processId/quotations
-```
-
----
-
-## Suppliers (Planned — Phase 2)
-
-```http
-GET  /api/v1/suppliers
-POST /api/v1/suppliers
+GET   /api/v1/suppliers
+POST  /api/v1/suppliers
 
 GET   /api/v1/suppliers/:supplierId
 PATCH /api/v1/suppliers/:supplierId
 ```
 
-Supplier selection is a process action:
+---
+
+## Documents (Implemented — Phase 2)
 
 ```http
-POST /api/v1/processes/:processId/supplier
+GET    /api/v1/processes/:processId/documents
+POST   /api/v1/processes/:processId/documents
+DELETE /api/v1/processes/:processId/documents/:documentId
 ```
+
+Actual binary storage is separated from the database via `storageService`. The `Document` record contains metadata, mime type, byte size, and a `storageKey` reference.
 
 ---
 
-## Documents (Planned — Phase 2)
+## Legal Classification & Justifications (Implemented — Phase 3)
 
 ```http
-GET  /api/v1/processes/:processId/documents
-POST /api/v1/processes/:processId/documents
+PUT /api/v1/processes/:processId/legal-classification
+PUT /api/v1/processes/:processId/justifications
+PUT /api/v1/processes/:processId/supplier
 ```
 
-Actual binary storage is separated from the database. The `Document` record contains metadata and a `storageKey` reference.
+- **`PUT .../legal-classification`**: Validates legal basis under Art. 75 of Lei 14.133/2021 against applicable decree monetary thresholds, records `legalBasis` and `legalJustification`, and logs `LEGAL_CLASSIFICATION_UPDATED`.
+- **`PUT .../justifications`**: Records `priceJustification` and `supplierJustification`, verifying non-empty content and logging `PRICE_JUSTIFICATION_UPDATED` and `SUPPLIER_JUSTIFICATION_UPDATED`.
+- **`PUT .../supplier`**: Formally selects the supplier for the process. Validates user permission (`ADMIN`, `AGENTE_CONTRATACAO`, or requester on own draft) and enforces that the selected supplier has an active registered quotation for the process. Transitions process status to `SUPPLIER_SELECTED` if currently in `DRAFT`/`PRICE_RESEARCH`.
+
+---
+
+## Process Submission (Implemented — Phase 3)
+
+```http
+POST /api/v1/processes/:processId/submit
+```
+
+Atomic domain operation that validates process completeness across 7 dimensions (Basic Information, DFD, Legal Basis, Quotations, Justifications, Supplier Selection, Documents), transitions status to `AWAITING_APPROVAL`, and creates `PROCESS_SUBMITTED` in `AuditLog` within a single database transaction. Standard requesters are subsequently locked from editing the process.
+
+---
+
+## Process Approval & Review Workflow (Planned — Phase 4)
+
+```http
+POST /api/v1/processes/:processId/approve
+POST /api/v1/processes/:processId/request-adjustment
+POST /api/v1/processes/:processId/reject
+```
 
 ---
 
