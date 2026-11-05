@@ -37,6 +37,7 @@ export const PROCESS_STATUSES = [
   "PRICE_RESEARCH",
   "SUPPLIER_SELECTED",
   "AWAITING_APPROVAL",
+  "RETURNED_FOR_ADJUSTMENT",
   "REJECTED",
   "APPROVED",
   "COMPLETED",
@@ -203,7 +204,11 @@ export function canUserAccessProcess(user, processRecord) {
 export function canUserEditProcess(user, processRecord) {
   if (!user || !processRecord) return false;
   if (!ALLOWED_EDIT_ROLES.includes(user.role)) return false;
-  if (processRecord.status !== "DRAFT") return false;
+
+  const isEditable =
+    processRecord.status === "DRAFT" ||
+    processRecord.status === "RETURNED_FOR_ADJUSTMENT";
+  if (!isEditable) return false;
 
   if (user.role === "SOLICITANTE") {
     if (processRecord.requesterId !== user.id) return false;
@@ -227,6 +232,32 @@ export function canUserEditProcess(user, processRecord) {
   return true;
 }
 
+export function canUserModifyInstructionData(user, processRecord) {
+  if (!user || !processRecord) return false;
+  if (processRecord.deletedAt) return false;
+
+  if (
+    processRecord.status === "DRAFT" ||
+    processRecord.status === "RETURNED_FOR_ADJUSTMENT"
+  ) {
+    return canUserEditProcess(user, processRecord);
+  }
+
+  // During active analysis, only the procurement agent of the department can adjust instruction data
+  if (processRecord.status === "IN_ANALYSIS") {
+    if (user.role !== "AGENTE_CONTRATACAO") return false;
+    if (
+      !user.departmentId ||
+      user.departmentId !== processRecord.departmentId
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
 export function canUserSelectSupplier(user, processRecord) {
   if (!user || !processRecord) return false;
   if (processRecord.deletedAt) return false;
@@ -237,7 +268,21 @@ export function canUserSelectSupplier(user, processRecord) {
   ) {
     return false;
   }
+
+  // During active analysis, only AGENTE_CONTRATACAO from the department can adjust supplier selection
+  if (processRecord.status === "IN_ANALYSIS") {
+    if (user.role !== "AGENTE_CONTRATACAO") return false;
+    if (
+      !user.departmentId ||
+      user.departmentId !== processRecord.departmentId
+    ) {
+      return false;
+    }
+    return true;
+  }
+
   if (user.role === "ADMIN") return true;
+
   if (user.role === "AGENTE_CONTRATACAO") {
     if (
       user.departmentId &&
@@ -248,9 +293,10 @@ export function canUserSelectSupplier(user, processRecord) {
     }
     return true;
   }
+
   if (user.role === "SOLICITANTE") {
     if (
-      processRecord.status === "DRAFT" &&
+      ["DRAFT", "RETURNED_FOR_ADJUSTMENT"].includes(processRecord.status) &&
       processRecord.requesterId === user.id
     ) {
       if (
@@ -262,6 +308,7 @@ export function canUserSelectSupplier(user, processRecord) {
       return true;
     }
   }
+
   return false;
 }
 
@@ -1213,12 +1260,16 @@ async function updateProcess(processId, body, user) {
     }
   }
 
-  // Enforce DRAFT status requirement for editing
-  if (existingProcess.status !== "DRAFT") {
+  // Enforce editable status requirement for ordinary editing
+  if (
+    existingProcess.status !== "DRAFT" &&
+    existingProcess.status !== "RETURNED_FOR_ADJUSTMENT"
+  ) {
     throw new ConflictError({
-      message: "Only processes in DRAFT status can be edited.",
+      message:
+        "Only processes in DRAFT or RETURNED_FOR_ADJUSTMENT status can be edited directly.",
       action:
-        "This process has already left DRAFT status and cannot be modified through ordinary editing.",
+        "This process has left editable status and cannot be modified through ordinary editing.",
     });
   }
 
@@ -1674,12 +1725,12 @@ async function updateProcessJustifications(processId, body, user) {
     });
   }
 
-  if (!canUserEditProcess(user, existingProcess)) {
+  if (!canUserModifyInstructionData(user, existingProcess)) {
     throw new ForbiddenError({
       message:
         "Você não tem autorização para atualizar justificativas deste processo.",
       action:
-        "Apenas usuários autorizados podem editar justificativas em rascunho.",
+        "Apenas usuários autorizados podem editar justificativas em rascunho ou durante a análise técnica.",
     });
   }
 
@@ -1747,6 +1798,7 @@ const processService = {
   updateProcessJustifications,
   canUserAccessProcess,
   canUserEditProcess,
+  canUserModifyInstructionData,
   canUserSelectSupplier,
   canUserSubmitProcess,
   isValidUuid,

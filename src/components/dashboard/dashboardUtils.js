@@ -9,6 +9,7 @@ export const STATUS_LABELS = {
   PRICE_RESEARCH: "Pesquisa de Preços",
   SUPPLIER_SELECTED: "Fornecedor Selecionado",
   AWAITING_APPROVAL: "Aguardando Aprovação",
+  RETURNED_FOR_ADJUSTMENT: "Devolvido para Ajustes",
   REJECTED: "Rejeitado",
   APPROVED: "Aprovado",
   COMPLETED: "Concluído",
@@ -25,6 +26,8 @@ export const STATUS_BADGE_STYLES = {
     "bg-secondary-container text-on-secondary-container border-secondary/20",
   AWAITING_APPROVAL:
     "bg-tertiary-fixed text-on-tertiary-fixed-variant border-tertiary/30",
+  RETURNED_FOR_ADJUSTMENT:
+    "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700/40",
   REJECTED: "bg-error-container text-on-error-container border-error/20",
   APPROVED: "bg-primary-fixed text-on-primary-fixed-variant border-primary/20",
   COMPLETED: "bg-primary-fixed text-on-primary-fixed-variant border-primary/20",
@@ -78,6 +81,10 @@ export const AUDIT_ACTION_LABELS = {
   LEGAL_CLASSIFICATION_UPDATED: "Enquadramento legal atualizado",
   PRICE_JUSTIFICATION_UPDATED: "Justificativa de preço atualizada",
   SUPPLIER_JUSTIFICATION_UPDATED: "Justificativa do fornecedor atualizada",
+  APPROVAL_TASK_ASSIGNED: "Tarefa de aprovação atribuída",
+  APPROVAL_STAGE_APPROVED: "Etapa de análise técnica aprovada",
+  PROCESS_ADJUSTMENT_REQUESTED: "Ajustes solicitados no processo",
+  PROCESS_RESUBMITTED: "Processo ressubmetido após ajustes",
 };
 
 export const LIFECYCLE_STAGES = [

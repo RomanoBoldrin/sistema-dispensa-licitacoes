@@ -41,14 +41,16 @@ export default function DashboardSidebar({
       items: [
         {
           label: "Caixa de Aprovações",
-          href: null,
+          href: "/approvals",
           icon: "fact_check",
+          isActualRoute: true,
           badge:
-            userRole === "APROVADOR" && attentionCount > 0
+            (userRole === "APROVADOR" || userRole === "AGENTE_CONTRATACAO") &&
+            attentionCount > 0
               ? `${attentionCount} pendente(s)`
-              : "Em breve",
+              : null,
           badgeColor:
-            userRole === "APROVADOR" && attentionCount > 0
+            attentionCount > 0
               ? "bg-tertiary-fixed text-on-tertiary-fixed-variant"
               : undefined,
         },

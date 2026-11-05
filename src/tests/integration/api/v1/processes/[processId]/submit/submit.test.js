@@ -358,13 +358,22 @@ describe("Process Submission Workflow & Justifications (Integration Tests)", () 
       expect(submitRes.status).toBe(200);
       const submitBody = await submitRes.json();
       expect(submitBody.success).toBe(true);
-      expect(submitBody.process.status).toBe("AWAITING_APPROVAL");
+      expect(submitBody.process.status).toBe("IN_ANALYSIS");
 
       // Verify database state directly
       const dbProcess = await prisma.process.findUnique({
         where: { id: draftProcess.id },
       });
-      expect(dbProcess.status).toBe("AWAITING_APPROVAL");
+      expect(dbProcess.status).toBe("IN_ANALYSIS");
+
+      // Verify initial Stage 1 approval task assigned to AGENTE_CONTRATACAO
+      const pendingTask = await prisma.approval.findFirst({
+        where: { processId: draftProcess.id, decision: null },
+      });
+      expect(pendingTask).toBeDefined();
+      expect(pendingTask.stage).toBe("ANALYSIS");
+      expect(pendingTask.assignedRole).toBe("AGENTE_CONTRATACAO");
+      expect(pendingTask.cycle).toBe(1);
 
       // Verify audit log
       const submitAudit = await prisma.auditLog.findFirst({
@@ -394,7 +403,7 @@ describe("Process Submission Workflow & Justifications (Integration Tests)", () 
       expect(body.message).toContain("já foi submetido");
     });
 
-    it("locks ordinary editing (PATCH) once the process is in AWAITING_APPROVAL", async () => {
+    it("locks ordinary editing (PATCH) once the process is in IN_ANALYSIS", async () => {
       const res = await fetch(
         `${webserver.origin}/api/v1/processes/${draftProcess.id}`,
         {

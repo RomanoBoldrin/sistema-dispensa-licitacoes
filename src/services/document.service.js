@@ -28,13 +28,23 @@ export const DOCUMENT_TYPE_LABELS = {
   OUTRO: "Outro Documento",
 };
 
-export const LOCKED_DOCUMENT_STATUSES = ["APPROVED", "COMPLETED", "REJECTED"];
+export const LOCKED_DOCUMENT_STATUSES = [
+  "AWAITING_APPROVAL",
+  "APPROVED",
+  "COMPLETED",
+  "REJECTED",
+];
 
 export function canUserManageDocuments(user, processRecord) {
   if (!user || !processRecord) return false;
   if (processRecord.deletedAt) return false;
 
   if (LOCKED_DOCUMENT_STATUSES.includes(processRecord.status)) {
+    return false;
+  }
+
+  // During active analysis, ADMIN is strictly read-only
+  if (processRecord.status === "IN_ANALYSIS" && user.role === "ADMIN") {
     return false;
   }
 
@@ -53,7 +63,7 @@ export function canUserManageDocuments(user, processRecord) {
 
   if (user.role === "SOLICITANTE") {
     if (
-      processRecord.status === "DRAFT" &&
+      ["DRAFT", "RETURNED_FOR_ADJUSTMENT"].includes(processRecord.status) &&
       processRecord.requesterId === user.id
     ) {
       return true;
@@ -344,6 +354,15 @@ export async function deactivateDocument(processId, documentId, user) {
       message:
         "Não é permitido desativar documentos de processos já finalizados ou em fase de aprovação.",
       action: "Documentos de processos concluídos são mantidos para auditoria.",
+    });
+  }
+
+  if (document.process.status === "IN_ANALYSIS" && user.role === "ADMIN") {
+    throw new ForbiddenError({
+      message:
+        "Administradores têm acesso apenas de leitura durante etapas ativas de análise e aprovação.",
+      action:
+        "Modificações durante a análise técnica cabem exclusivamente ao agente de contratação responsável.",
     });
   }
 

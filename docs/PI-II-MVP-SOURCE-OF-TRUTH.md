@@ -11,7 +11,7 @@
 >
 > **Last updated:** 2026-11-05\
 > **Project:** `sistema-dispensa-licitacoes-js`\
-> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), and Phase 3 (Legal Classification, Justifications & Submission Workflow) are completed and verified (20/20 test suites passed, 185/185 tests passed). Next priority is Phase 4 (Internal Analysis and Approval Workflow).
+> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), and Phase 4 (Internal Analysis and Approval Workflow) are completed and verified (23/23 test suites passed, 238/238 tests passed). Next priority is Phase 5 (Authorization, Publication, and Transparency).
 
 ---
 
@@ -893,23 +893,24 @@ Demonstrably achieved on 2026-11-05 (20/20 test suites passed, 185/185 tests pas
 ### Phase 4 --- Internal analysis and approval workflow
 
 **Goal:** support the documented approval inbox and decisions.
+Demonstrably achieved on 2026-11-05 (23/23 test suites passed, 238/238 tests passed).
 
-Tasks: - \[ \] Define workflow stages and responsible roles. - \[ \]
-Define sequential, parallel, or hybrid approval behavior. - \[ \] Define
-pending assignment and decision data model. - \[ \] Implement approval
-inbox with authorized pending processes. - \[ \] Implement process
-analysis/detail view. - \[ \] Implement approve-stage action and
-forwarding. - \[ \] Implement request-adjustment action and return to
-requester. - \[ \] Implement rejection/closure action. - \[ \] Record
-reviewer, stage, decision, comment, and timestamps. - \[ \] Enforce all
-transition and authorization rules on the server. - \[ \] Record each
-transition in history/audit. - \[ \] Notify relevant users if
-notifications are included in the MVP. - \[ \] Add integration tests for
-the full decision paths.
+Tasks:
 
-**Exit criterion:** an authorized reviewer can process an assigned case,
-and each decision produces the correct next state, assignment,
-permissions, and history.
+- [x] Define workflow stages and responsible roles (`ANALYSIS` -> `AGENTE_CONTRATACAO`, `APPROVAL` -> `APROVADOR`).
+- [x] Define sequential approval behavior (Stage 1 technical analysis in `IN_ANALYSIS`, Stage 2 internal approval in `AWAITING_APPROVAL`).
+- [x] Define pending assignment and decision data model (extended `Approval` with nullable `userId`, `decision`, `stage`, `assignedRole`, `cycle`, `decidedAt`; DB check constraints for stage-role mapping and decision consistency; partial unique index on `[processId, cycle, stage] WHERE decision IS NULL`).
+- [x] Implement approval inbox with authorized pending processes (`GET /api/v1/approvals` and `/approvals` UI).
+- [x] Implement process analysis/detail view (`ApprovalWorkflowTab` under `/processes/:id?tab=approvals` with full cycle history and decision actions).
+- [x] Implement approve-stage action and forwarding (`POST /api/v1/processes/:id/workflow/approve` advances Stage 1 -> Stage 2, or Stage 2 -> `APPROVED`).
+- [x] Implement request-adjustment action and return to requester (`POST /api/v1/processes/:id/workflow/request-adjustment` returns to `RETURNED_FOR_ADJUSTMENT`, unlocks requester editing; resubmission creates Cycle N+1 preserving all history).
+- [x] Implement rejection/closure action (`POST /api/v1/processes/:id/workflow/reject` transitions to terminal `REJECTED` status).
+- [x] Record reviewer, stage, decision, comment, and timestamps.
+- [x] Enforce all transition and authorization rules on the server (fail-closed department isolation, segregation of duties preventing requester self-review, ADMIN read-only during active workflow).
+- [x] Record each transition in history/audit (`AuditLog` with `fromStatus` and `toStatus`).
+- [x] Integration tests for the full decision paths (`src/tests/integration/api/v1/workflow/workflow.test.js` and migration backfill tests).
+
+**Exit criterion:** an authorized reviewer can process an assigned case, and each decision produces the correct next state, assignment, permissions, and history. (Fully demonstrated across unit and integration tests).
 
 ### Phase 5 --- Authorization, publication, and transparency
 
@@ -1197,14 +1198,42 @@ Phase 3 delivered the legal classification engine, formal justifications, suppli
 
 ---
 
-### 14.4 Next Priority: Phase 4 — Internal Analysis and Approval Workflow
+### 14.4 Phase 4: Internal Analysis and Approval Workflow (Completed)
 
-With Phase 3 complete, the next phase will implement:
+Demonstrated and verified on 2026-11-05:
 
-1. Workflow stages and responsible roles (`AGENTE_CONTRATACAO`, `ANALISTA`, `AUTORIDADE_COMPETENTE`).
-2. Internal analysis inbox for assigned/pending processes in `AWAITING_APPROVAL` status.
-3. Analysis view with stage progression: Approve, Request Adjustment (return to requester), Reject/Close.
-4. Historical and audit tracking of reviewer decisions, formal opinions, and approval chains.
+1. **Two-Stage Sequential Workflow**:
+   - **Stage 1 (`ANALYSIS`)**: Process in `IN_ANALYSIS`, assigned to `AGENTE_CONTRATACAO` pool within the process's department. Allowed decisions: `APPROVED` (forwards to Stage 2) and `ADJUSTMENT_REQUESTED` (returns to requester). Requester editing is locked. `AGENTE_CONTRATACAO` can make technical procurement adjustments (quotations, supplier selection, legal classification, justifications, documents) with strict audit logging.
+   - **Stage 2 (`APPROVAL`)**: Process in `AWAITING_APPROVAL`, assigned to `APROVADOR` pool within the process's department. Allowed decisions: `APPROVED` (transitions process to `APPROVED`), `ADJUSTMENT_REQUESTED` (returns to requester), and `REJECTED` (terminates process in `REJECTED`).
+2. **Authorization Boundaries & Integrity Protections**:
+   - **Fail-Closed Department Isolation**: Both `AGENTE_CONTRATACAO` and `APROVADOR` must have a non-null `departmentId` matching `process.departmentId`. Users with `departmentId: null` fail closed with `403 Forbidden`.
+   - **Segregation of Duties**: A reviewer cannot review a process they requested (`process.requesterId !== user.id`).
+   - **No ADMIN Bypass**: `ADMIN` is strictly read-only during active review (`IN_ANALYSIS` and `AWAITING_APPROVAL`) per RN-007.
+3. **Resubmission & Workflow Cycles**:
+   - Requesting adjustment completes the current task with `ADJUSTMENT_REQUESTED` and transitions process to `RETURNED_FOR_ADJUSTMENT`.
+   - The requester regains full draft-level editing permissions.
+   - Resubmission (`POST /api/v1/processes/:id/submit`) re-validates full procurement completeness, increments `currentCycle` ($N+1$), transitions process to `IN_ANALYSIS`, and generates a new pending Stage 1 task.
+   - Historical decisions from previous cycles are permanently preserved and never overwritten.
+4. **Database & Data Model Integrity**:
+   - Extended `Approval` model: nullable `userId`, nullable `decision`; added `stage`, `assignedRole`, `cycle` (default 1), `decidedAt`.
+   - Database check constraint `chk_approval_stage_role` enforces `ANALYSIS` -> `AGENTE_CONTRATACAO` and `APPROVAL` -> `APROVADOR`.
+   - Database check constraint `chk_approval_decision_consistency` enforces that pending tasks (`decision IS NULL`) have `userId IS NULL` and `decidedAt IS NULL`, while decided tasks have non-null `userId`, `decision`, and `decidedAt`.
+   - Partial unique index `idx_approval_pending_unique` on `(processId, cycle, stage) WHERE decision IS NULL` guarantees at the database level that duplicate pending tasks can never exist.
+5. **UI & API Verticals**:
+   - Approval inbox (`/approvals` and `GET /api/v1/approvals`) with status filtering, stage filtering, search, and pagination.
+   - Process Detail workflow tab (`/processes/:id?tab=approvals` and `ApprovalWorkflowTab`) showing active stage card, action modals (with validation and server errors), and expandable historical cycles.
+   - Comprehensive test coverage: 23/23 test suites passing, 238/238 tests passing.
+
+---
+
+### 14.5 Next Priority: Phase 5 — Authorization, Publication, and Transparency
+
+With Phase 4 complete, the next phase will implement:
+
+1. Publication eligibility validation for `APPROVED` processes.
+2. Official publication extract generation and persistence.
+3. Public transparency portal with allowlisted fields and document access.
+4. PNCP preparation/integration architecture.
 
 ---
 
@@ -1227,4 +1256,4 @@ When implementation changes:
 - Keep legal requirements and external integration behavior current
   and independently verified.
 
-**Current overall status:** Phase 0 (Repository audit and alignment), Phase 1 (Process foundation), Phase 2 (Procurement preparation), and Phase 3 (Legal Classification, Justifications & Submission Workflow) are **COMPLETE**. The next priority is **Phase 4: Internal Analysis and Approval Workflow**.
+**Current overall status:** Phase 0 (Repository audit and alignment), Phase 1 (Process foundation), Phase 2 (Procurement preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), and Phase 4 (Internal Analysis and Approval Workflow) are **COMPLETE**. The next priority is **Phase 5: Authorization, Publication, and Transparency**.

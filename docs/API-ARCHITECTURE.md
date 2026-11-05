@@ -803,25 +803,50 @@ PATCH /api/v1/processes/:processId
 
 ---
 
-# 23. Planned Workflow Endpoints (Phases 2–5)
+# 23. Workflow Endpoints (Implemented — Phase 4)
 
-The following domain action endpoints are planned for subsequent phases:
+The internal analysis and approval workflow endpoints are implemented as follows:
 
-- **Process Submission (`POST /api/v1/processes/:processId/submit`)**: Validates completeness of `DRAFT` process and transitions `DRAFT → IN_ANALYSIS` with `PROCESS_SUBMITTED` audit log.
-- **Supplier Selection (`POST /api/v1/processes/:processId/supplier`)**: Validates quotations and justification, sets `selectedSupplierId` and `supplierJustification`, and logs `SUPPLIER_SELECTED`.
-- **Submission for Approval (`POST /api/v1/processes/:processId/submit-for-approval`)**: Validates quotations, selected supplier, justification, and required documents, transitioning to `AWAITING_APPROVAL` with `PROCESS_SENT_FOR_APPROVAL`.
-- **Approval (`POST /api/v1/processes/:processId/approve`)**: Restricted to `APROVADOR` when `status === "AWAITING_APPROVAL"`; creates `Approval(APPROVED)`, updates status to `APPROVED`, and logs `PROCESS_APPROVED` in a transaction.
-- **Rejection (`POST /api/v1/processes/:processId/reject`)**: Restricted to `APROVADOR` when `status === "AWAITING_APPROVAL"`; requires comment, creates `Approval(REJECTED)`, updates status to `REJECTED`, and logs `PROCESS_REJECTED` in a transaction.
+- **Approval Inbox (`GET /api/v1/approvals`)**: Returns pending or completed approval tasks scoped to the authenticated user's department and role pool (`AGENTE_CONTRATACAO` for Stage 1 `ANALYSIS`; `APROVADOR` for Stage 2 `APPROVAL`; `ADMIN` oversight). Supports query parameters `status` (`PENDING`, `COMPLETED`, `ALL`), `stage` (`ANALYSIS`, `APPROVAL`), `search`, `page`, and `pageSize`.
+- **Workflow State & Cycles (`GET /api/v1/processes/:processId/workflow`)**: Returns current stage, active pending task, user-specific permission flags (`canAct`, `canApprove`, `canRequestAdjustment`, `canReject`), and complete cycle history.
+- **Approve Stage / Process (`POST /api/v1/processes/:processId/workflow/approve`)**:
+  - Stage 1 (`ANALYSIS`, `IN_ANALYSIS`): Restricted to `AGENTE_CONTRATACAO` in the same department; transitions task to `APPROVED`, updates process status to `AWAITING_APPROVAL`, and creates pending Stage 2 task for `APROVADOR`.
+  - Stage 2 (`APPROVAL`, `AWAITING_APPROVAL`): Restricted to `APROVADOR` in the same department; transitions task to `APPROVED` and process status to `APPROVED`.
+  - Also aliased to `POST /api/v1/processes/:processId/approve`.
+- **Request Adjustment (`POST /api/v1/processes/:processId/workflow/request-adjustment`)**:
+  - Available in both stages. Requires a substantive comment (`>= 10` characters).
+  - Completes active task with `ADJUSTMENT_REQUESTED` and returns process to `RETURNED_FOR_ADJUSTMENT`.
+  - Unlocks requester editing rights.
+  - Subsequent resubmission via `POST /api/v1/processes/:processId/submit` starts Cycle $N+1$, preserves previous decisions, and restarts at Stage 1 (`IN_ANALYSIS`).
+  - Also aliased to `POST /api/v1/processes/:processId/request-adjustment`.
+- **Reject Process (`POST /api/v1/processes/:processId/workflow/reject`)**:
+  - Restricted to Stage 2 (`APPROVAL`) by authorized `APROVADOR`.
+  - Requires a substantive rejection reason (`>= 10` characters).
+  - Completes task with `REJECTED`, sets process status to terminal `REJECTED`, and prevents any further submissions or approvals.
+  - Also aliased to `POST /api/v1/processes/:processId/reject`.
+
+---
+
+# 24. Planned Publication Endpoints (Phase 5)
+
+The following publication endpoints are planned for Phase 5:
+
+- **Publish Process (`POST /api/v1/processes/:processId/publish`)**: Restricted to `AUTORIDADE_COMPETENTE` / `ADMIN` for `APPROVED` processes.
+- **Public Consultation (`GET /api/v1/public/processes`)**: Public search with strict allowlist.
+- **Public Process Detail (`GET /api/v1/public/processes/:processId`)**: Public details omitting internal reviews/identities.
 - **Completion (`POST /api/v1/processes/:processId/complete`)**: Transitions `APPROVED → COMPLETED` and logs `PROCESS_COMPLETED`.
 
 ---
 
-# 24. API Security Requirements
+# 25. API Security Requirements
 
 The API enforces the following security guarantees:
 
 - Authenticate protected requests via server-side sessions (`src/infra/authentication.js`).
-- Authorize every protected operation server-side (`src/services/process.service.js`).
+- Authorize every protected operation server-side (`src/services/process.service.js`, `src/services/workflow.service.js`).
+- Strict fail-closed department isolation: users with null `departmentId` cannot act on department processes.
+- Segregation of duties: reviewers cannot review processes where they are the requester (`requesterId === user.id`).
+- Administrative oversight boundary: `ADMIN` users are strictly read-only during active review (`IN_ANALYSIS`, `AWAITING_APPROVAL`).
 - Validate all incoming request payloads and query parameters.
 - Never trust role, requester ID, department ID, or process status supplied by the client.
 - Never expose `passwordHash`, session tokens, or password reset tokens in any API projection.
@@ -830,30 +855,37 @@ The API enforces the following security guarantees:
 
 ---
 
-# 25. API Contract Summary
+# 26. API Contract Summary
 
-| Resource / Action     | Method        | Endpoint                                               | Phase Status        |
-| --------------------- | ------------- | ------------------------------------------------------ | ------------------- |
-| System status         | GET           | `/api/v1/status`                                       | Implemented         |
-| Login / Logout        | POST/DELETE   | `/api/v1/auth/sessions`                                | Implemented         |
-| Forgot password       | POST          | `/api/v1/auth/forgot-password`                         | Implemented         |
-| Reset password        | POST          | `/api/v1/auth/reset-password`                          | Implemented         |
-| Current user          | GET           | `/api/v1/user`                                         | Implemented         |
-| Users                 | POST/GET      | `/api/v1/users`, `/api/v1/users/:username`             | Implemented         |
-| Dashboard             | GET           | `/api/v1/dashboard`                                    | Implemented         |
-| List processes        | GET           | `/api/v1/processes`                                    | Implemented (Ph. 1) |
-| Create process + DFD  | POST          | `/api/v1/processes`                                    | Implemented (Ph. 1) |
-| Get process detail    | GET           | `/api/v1/processes/:processId`                         | Implemented (Ph. 1) |
-| Update draft process  | PATCH         | `/api/v1/processes/:processId`                         | Implemented (Ph. 1) |
-| List/Create suppliers | GET/POST      | `/api/v1/suppliers`                                    | Implemented (Ph. 2) |
-| Supplier detail/edit  | GET/PATCH     | `/api/v1/suppliers/:supplierId`                        | Implemented (Ph. 2) |
-| Quotations + Map      | GET/POST      | `/api/v1/processes/:processId/quotations`              | Implemented (Ph. 2) |
-| Quotation detail/edit | GET/PATCH/DEL | `/api/v1/processes/:processId/quotations/:quotationId` | Implemented (Ph. 2) |
-| Documents list/upload | GET/POST      | `/api/v1/processes/:processId/documents`               | Implemented (Ph. 2) |
-| Document stream/del   | GET/DELETE    | `/api/v1/processes/:processId/documents/:documentId`   | Implemented (Ph. 2) |
-| Submit process        | POST          | `/api/v1/processes/:processId/submit`                  | Planned (Ph. 3)     |
-| Select supplier       | POST          | `/api/v1/processes/:processId/supplier`                | Planned (Ph. 3)     |
-| Submit for approval   | POST          | `/api/v1/processes/:processId/submit-for-approval`     | Planned (Ph. 3)     |
-| Approve               | POST          | `/api/v1/processes/:processId/approve`                 | Planned (Ph. 4)     |
-| Reject                | POST          | `/api/v1/processes/:processId/reject`                  | Planned (Ph. 4)     |
-| Complete              | POST          | `/api/v1/processes/:processId/complete`                | Planned (Ph. 5)     |
+| Resource / Action            | Method        | Endpoint                                                   | Phase Status            |
+| ---------------------------- | ------------- | ---------------------------------------------------------- | ----------------------- |
+| System status                | GET           | `/api/v1/status`                                           | Implemented             |
+| Login / Logout               | POST/DELETE   | `/api/v1/auth/sessions`                                    | Implemented             |
+| Forgot password              | POST          | `/api/v1/auth/forgot-password`                             | Implemented             |
+| Reset password               | POST          | `/api/v1/auth/reset-password`                              | Implemented             |
+| Current user                 | GET           | `/api/v1/user`                                             | Implemented             |
+| Users                        | POST/GET      | `/api/v1/users`, `/api/v1/users/:username`                 | Implemented             |
+| Dashboard                    | GET           | `/api/v1/dashboard`                                        | Implemented             |
+| List processes               | GET           | `/api/v1/processes`                                        | Implemented (Ph. 1)     |
+| Create process + DFD         | POST          | `/api/v1/processes`                                        | Implemented (Ph. 1)     |
+| Get process detail           | GET           | `/api/v1/processes/:processId`                             | Implemented (Ph. 1)     |
+| Update draft process         | PATCH         | `/api/v1/processes/:processId`                             | Implemented (Ph. 1)     |
+| List/Create suppliers        | GET/POST      | `/api/v1/suppliers`                                        | Implemented (Ph. 2)     |
+| Supplier detail/edit         | GET/PATCH     | `/api/v1/suppliers/:supplierId`                            | Implemented (Ph. 2)     |
+| Quotations + Map             | GET/POST      | `/api/v1/processes/:processId/quotations`                  | Implemented (Ph. 2)     |
+| Quotation detail/edit        | GET/PATCH/DEL | `/api/v1/processes/:processId/quotations/:quotationId`     | Implemented (Ph. 2)     |
+| Documents list/upload        | GET/POST      | `/api/v1/processes/:processId/documents`                   | Implemented (Ph. 2)     |
+| Document stream/del          | GET/DELETE    | `/api/v1/processes/:processId/documents/:documentId`       | Implemented (Ph. 2)     |
+| Legal classification update  | PATCH         | `/api/v1/processes/:processId/legal-classification`        | Implemented (Ph. 3)     |
+| Supplier selection           | POST          | `/api/v1/processes/:processId/supplier`                    | Implemented (Ph. 3)     |
+| Justifications update        | PATCH         | `/api/v1/processes/:processId/justifications`              | Implemented (Ph. 3)     |
+| Submit process (draft/resub) | POST          | `/api/v1/processes/:processId/submit`                      | Implemented (Ph. 3 & 4) |
+| Approval inbox               | GET           | `/api/v1/approvals`                                        | Implemented (Ph. 4)     |
+| Workflow state & cycles      | GET           | `/api/v1/processes/:processId/workflow`                    | Implemented (Ph. 4)     |
+| Approve stage / process      | POST          | `/api/v1/processes/:processId/workflow/approve`            | Implemented (Ph. 4)     |
+| Request adjustment           | POST          | `/api/v1/processes/:processId/workflow/request-adjustment` | Implemented (Ph. 4)     |
+| Reject process               | POST          | `/api/v1/processes/:processId/workflow/reject`             | Implemented (Ph. 4)     |
+| Publish process              | POST          | `/api/v1/processes/:processId/publish`                     | Planned (Ph. 5)         |
+| Public process search        | GET           | `/api/v1/public/processes`                                 | Planned (Ph. 5)         |
+| Public process detail        | GET           | `/api/v1/public/processes/:processId`                      | Planned (Ph. 5)         |
+| Complete process             | POST          | `/api/v1/processes/:processId/complete`                    | Planned (Ph. 5)         |
