@@ -76,6 +76,9 @@ enum AuditAction {
   PROCESS_APPROVED
   PROCESS_REJECTED
   PROCESS_COMPLETED
+  LEGAL_CLASSIFICATION_UPDATED
+  PRICE_JUSTIFICATION_UPDATED
+  SUPPLIER_JUSTIFICATION_UPDATED
 }
 
 // ─────────────────────────────────────────────
@@ -210,6 +213,8 @@ model Process {
   selectedSupplier   Supplier? @relation("SelectedSupplier", fields: [selectedSupplierId], references: [id])
 
   supplierJustification String?
+  legalJustification    String?
+  priceJustification    String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

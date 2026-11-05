@@ -75,6 +75,9 @@ export const AUDIT_ACTION_LABELS = {
   PROCESS_APPROVED: "Processo aprovado",
   PROCESS_REJECTED: "Processo rejeitado",
   PROCESS_COMPLETED: "Processo concluído",
+  LEGAL_CLASSIFICATION_UPDATED: "Enquadramento legal atualizado",
+  PRICE_JUSTIFICATION_UPDATED: "Justificativa de preço atualizada",
+  SUPPLIER_JUSTIFICATION_UPDATED: "Justificativa do fornecedor atualizada",
 };
 
 export const LIFECYCLE_STAGES = [
@@ -221,6 +224,33 @@ export function formatCnpj(cnpj) {
     /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
     "$1.$2.$3/$4-$5",
   );
+}
+
+export function normalizePhone(phone) {
+  if (typeof phone !== "string") return "";
+  const digits = phone.replace(/\D/g, "");
+  if (
+    (digits.length === 12 || digits.length === 13) &&
+    digits.startsWith("55")
+  ) {
+    return digits.slice(2);
+  }
+  return digits;
+}
+
+export function formatPhone(phone) {
+  const digits = normalizePhone(phone).slice(0, 11);
+  if (!digits) return "";
+  if (digits.length <= 2) {
+    return `(${digits}`;
+  }
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  }
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 
 export function isValidCnpj(cnpj) {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPhone } from "@/components/dashboard/dashboardUtils";
 import SupplierFormModal from "./SupplierFormModal";
 
 export default function SupplierManagementTab({
@@ -179,7 +180,7 @@ export default function SupplierManagementTab({
 
                     <td className="px-md py-3 text-xs text-on-surface-variant">
                       {sup.email && <p>{sup.email}</p>}
-                      {sup.phone && <p>{sup.phone}</p>}
+                      {sup.phone && <p>{formatPhone(sup.phone)}</p>}
                       {!sup.email && !sup.phone && <p>—</p>}
                     </td>
 

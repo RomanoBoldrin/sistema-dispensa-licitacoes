@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   formatCnpj,
+  formatPhone,
   isValidCnpj,
   normalizeCnpj,
+  normalizePhone,
 } from "@/components/dashboard/dashboardUtils";
 
 function SupplierFormContent({ onClose, onSubmit, initialData }) {
@@ -10,7 +12,7 @@ function SupplierFormContent({ onClose, onSubmit, initialData }) {
   const [tradeName, setTradeName] = useState(initialData?.tradeName || "");
   const [cnpj, setCnpj] = useState(formatCnpj(initialData?.cnpj || ""));
   const [email, setEmail] = useState(initialData?.email || "");
-  const [phone, setPhone] = useState(initialData?.phone || "");
+  const [phone, setPhone] = useState(formatPhone(initialData?.phone || ""));
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
@@ -20,6 +22,12 @@ function SupplierFormContent({ onClose, onSubmit, initialData }) {
     const digits = normalizeCnpj(raw).slice(0, 14);
     const formatted = formatCnpj(digits);
     setCnpj(formatted);
+  };
+
+  const handlePhoneChange = (e) => {
+    const raw = e.target.value;
+    const formatted = formatPhone(raw);
+    setPhone(formatted);
   };
 
   const validate = () => {
@@ -37,6 +45,13 @@ function SupplierFormContent({ onClose, onSubmit, initialData }) {
 
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       newErrors.email = "Formato de e-mail inválido.";
+    }
+
+    if (phone.trim()) {
+      const digits = normalizePhone(phone);
+      if (digits.length < 10 || digits.length > 11) {
+        newErrors.phone = "Telefone deve conter DDD e 8 ou 9 dígitos.";
+      }
     }
 
     setErrors(newErrors);
@@ -71,7 +86,7 @@ function SupplierFormContent({ onClose, onSubmit, initialData }) {
   const labelClasses = "block font-label-sm font-semibold text-on-surface mb-1";
 
   return (
-    <div className="w-full max-w-lg rounded-2xl border border-outline-variant/80 bg-surface-container-lowest p-md shadow-xl sm:p-lg">
+    <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-outline-variant/80 bg-surface-container-lowest p-md shadow-xl sm:p-lg">
       <div className="flex items-center justify-between border-b border-outline-variant/50 pb-sm">
         <div className="flex items-center gap-xs">
           <span
@@ -194,12 +209,16 @@ function SupplierFormContent({ onClose, onSubmit, initialData }) {
             </label>
             <input
               id="sup-phone"
-              type="text"
+              type="tel"
               placeholder="(11) 98765-4321"
               className={inputClasses}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={handlePhoneChange}
+              maxLength={15}
             />
+            {errors.phone && (
+              <p className="mt-1 font-label-sm text-error">{errors.phone}</p>
+            )}
           </div>
         </div>
 
@@ -243,6 +262,19 @@ export default function SupplierFormModal({
   onSubmit,
   initialData = null,
 }) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -250,7 +282,12 @@ export default function SupplierFormModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="supplier-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/40 p-sm backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-sm backdrop-blur-sm"
     >
       <SupplierFormContent
         key={initialData?.id || "new-supplier"}
