@@ -11,7 +11,7 @@
 >
 > **Last updated:** 2026-11-05\
 > **Project:** `sistema-dispensa-licitacoes-js`\
-> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), and Phase 4 (Internal Analysis and Approval Workflow) are completed and verified (23/23 test suites passed, 238/238 tests passed). Next priority is Phase 5 (Authorization, Publication, and Transparency).
+> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), and Phase 4 (Internal Analysis and Approval Workflow) including Development Seeding are completed and verified (25/25 test suites passed, 250/250 tests passed). Next priority is Phase 5 (Authorization, Publication, and Transparency).
 
 ---
 
@@ -338,7 +338,10 @@ The supplied `package.json` includes:
 - `npm run db:studio`
 - `npm run lint:prettier:check`
 - `npm run lint:eslint:check`
-- `npm run db:seed:admin:dev`
+- `npm run db:seed:admin:dev` (and `npm run db:seed:admin`)
+- `npm run db:seed:demo-users:dev` (and `npm run db:seed:demo-users`)
+- `npm run db:seed:demo-scenarios:dev` (and `npm run db:seed:demo-scenarios`)
+- `npm run db:seed:all:dev` (and `npm run db:seed:all`)
 - Docker compose scripts for development and tests
 
 Use the project's scripts rather than inventing alternate commands.
@@ -1223,6 +1226,40 @@ Demonstrated and verified on 2026-11-05:
    - Approval inbox (`/approvals` and `GET /api/v1/approvals`) with status filtering, stage filtering, search, and pagination.
    - Process Detail workflow tab (`/processes/:id?tab=approvals` and `ApprovalWorkflowTab`) showing active stage card, action modals (with validation and server errors), and expandable historical cycles.
    - Comprehensive test coverage: 23/23 test suites passing, 238/238 tests passing.
+
+#### 14.4.1 Development Seeding & Workflow Verification Suite
+
+Implemented and verified on 2026-11-05:
+
+1. **Bootstrap & Safety Infrastructure (`scripts/helpers/bootstrap.mjs`)**:
+   - Automatically loads `.env.development` or `.env` when executing CLI seed scripts outside Next.js.
+   - Registers custom Node.js module resolution loader so `@/*` path aliases resolve cleanly in pure Node.js scripts.
+   - Sanitizes and masks passwords from database connection strings in console output.
+   - Enforces strict safety guards: `assertNonProduction()` immediately aborts execution in production environments; `assertDemoOptIn()` requires explicit confirmation via `ENABLE_DEMO_SEED=true` or `--force`/`--yes`.
+2. **Administrator Provisioning (`scripts/seed-admin.mjs`)**:
+   - Supports explicit identity via `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, and `SEED_ADMIN_PASSWORD`.
+   - Provisions root administrator with `departmentId: null` representing systemic oversight.
+   - Enforces 12-character minimum and forbids predictable default passwords in production.
+   - Preserves existing administrator passwords and roles idempotently.
+3. **Demo User Provisioning (`scripts/seed-demo-users.mjs`)**:
+   - Provisions 2 isolated departments: `Secretaria de Administração` and `Secretaria de Saúde`.
+   - Provisions 7 demo users covering all 4 roles: `admin@sisd.local`, `solicitante@sisd.local`, `agente@sisd.local`, `aprovador@sisd.local`, `solicitante2@sisd.local`, `agente2@sisd.local`, and `aprovador2@sisd.local`.
+   - Default configurable demo password (`SEED_DEMO_PASSWORD`, default `Demo@123456`).
+   - Fully idempotent: preserves passwords and detects role conflicts without silent overwrites.
+4. **Representative Scenario Provisioning (`scripts/seed-demo-scenarios.mjs`)**:
+   - Provisions 3 demo suppliers (`Alfa Suprimentos`, `Beta Distribuidora`, `Gama Soluções`).
+   - Provisions 6 realistic Phase 4 procurement scenarios under `Secretaria de Administração` by orchestrating actual domain services (`processService`, `quotationService`, `supplierService`, `legalService`, `documentService`, `submissionService`, `workflowService`):
+     - `DP-001/2026`: `DRAFT` (ready for submission)
+     - `DP-002/2026`: `IN_ANALYSIS` (pending Stage 1 technical review)
+     - `DP-003/2026`: `AWAITING_APPROVAL` (pending Stage 2 internal approval)
+     - `DP-004/2026`: `RETURNED_FOR_ADJUSTMENT` (cycle 1 returned, editable by requester)
+     - `DP-005/2026`: `APPROVED` (terminal approved across both stages)
+     - `DP-006/2026`: `REJECTED` (terminal rejected with formal justification)
+   - Fully idempotent: checks existing process numbers and states, never creating duplicates.
+5. **Testing & Verification**:
+   - Automated unit tests: `src/tests/unit/seedingGuards.test.js` (7 passed).
+   - Automated integration tests: `src/tests/integration/scripts/seeding.test.js` (5 passed).
+   - Manual workflow verification guide: `docs/PHASE-4-WORKFLOW-TESTING.md` (covering Tests A through H).
 
 ---
 
