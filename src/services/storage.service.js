@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { InternalServerError, ValidationError } from "@/infra/errors.js";
 
@@ -90,6 +91,11 @@ function getStorageRootDirectory() {
   const customDir = process.env.STORAGE_LOCAL_DIR;
   if (customDir) {
     return path.resolve(customDir);
+  }
+  // In serverless environments (e.g. Vercel, AWS Lambda), the deployment root (/var/task)
+  // is strictly read-only. The only writable local directory is os.tmpdir() (/tmp).
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join(os.tmpdir(), "storage", "uploads");
   }
   return path.resolve(process.cwd(), "storage/uploads");
 }
