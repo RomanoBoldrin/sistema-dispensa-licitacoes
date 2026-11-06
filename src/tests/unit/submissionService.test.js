@@ -40,6 +40,12 @@ describe("submissionService (Unit Tests)", () => {
     departmentId: deptAId,
   };
 
+  const autoridadeUser = {
+    id: "autoridade-id",
+    role: "AUTORIDADE_COMPETENTE",
+    departmentId: deptAId,
+  };
+
   function createValidProcess() {
     return {
       id: "proc-1",
@@ -134,6 +140,10 @@ describe("submissionService (Unit Tests)", () => {
 
     it("disallows APROVADOR role from submitting processes", () => {
       expect(canUserSubmitProcess(aprovadorUser, processRecord)).toBe(false);
+    });
+
+    it("disallows AUTORIDADE_COMPETENTE role from submitting processes", () => {
+      expect(canUserSubmitProcess(autoridadeUser, processRecord)).toBe(false);
     });
 
     it("disallows submission when process is soft-deleted", () => {

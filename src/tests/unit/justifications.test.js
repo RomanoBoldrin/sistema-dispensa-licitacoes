@@ -43,6 +43,12 @@ describe("justifications and supplier selection (Unit Tests)", () => {
     departmentId: deptAId,
   };
 
+  const autoridadeUser = {
+    id: "autoridade-1",
+    role: "AUTORIDADE_COMPETENTE",
+    departmentId: deptAId,
+  };
+
   describe("canUserSelectSupplier", () => {
     const draftProcess = {
       id: "p-1",
@@ -105,6 +111,10 @@ describe("justifications and supplier selection (Unit Tests)", () => {
 
     it("disallows APROVADOR role from selecting suppliers", () => {
       expect(canUserSelectSupplier(aprovadorUser, draftProcess)).toBe(false);
+    });
+
+    it("disallows AUTORIDADE_COMPETENTE role from selecting suppliers", () => {
+      expect(canUserSelectSupplier(autoridadeUser, draftProcess)).toBe(false);
     });
   });
 });

@@ -11,7 +11,7 @@
 >
 > **Last updated:** 2026-11-05\
 > **Project:** `sistema-dispensa-licitacoes-js`\
-> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), and Phase 4 (Internal Analysis and Approval Workflow) including Development Seeding are completed and verified (25/25 test suites passed, 250/250 tests passed). Next priority is Phase 5 (Authorization, Publication, and Transparency).
+> **Status:** Phase 0 (Audit & Alignment), Phase 1 (Process Foundation), Phase 2 (Procurement Preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), Phase 4 (Internal Analysis and Approval Workflow), Phase 5.1 (Procurement Finalization and Publication Database & Domain Foundation), Phase 5.2 (Final Authorization Backend Implementation), and Phase 5.3 (Publication Registration & Process Completion Backend) are completed and verified. Next priority is Phase 5.4 (Frontend User Interface & Public Transparency Consultation).
 
 ---
 
@@ -917,20 +917,40 @@ Tasks:
 
 ### Phase 5 --- Authorization, publication, and transparency
 
-**Goal:** make an approved process publishable and publicly consultable.
+**Goal:** make an approved process authorizable by the competent authority, publishable, and publicly consultable.
 
-Tasks: - \[ \] Define the final authorization/homologation stage, if
-applicable to the selected workflow. - \[ \] Implement publication
-eligibility rules. - \[ \] Generate a publication extract from approved
-process data. - \[ \] Implement publication records and status
-tracking. - \[ \] Publish the appropriate information on the public
-portal. - \[ \] Store publication evidence/receipt and timestamps. - \[
-\] Define PNCP scope: simulation/preparation or live integration. - \[
-\] If live integration is approved, implement it behind a dedicated
-integration boundary and test credentials/environment. - \[ \] Implement
-public process search. - \[ \] Implement a public process detail view
-with an explicit allowlist of disclosable fields/documents. - \[ \] Add
-tests to ensure internal data is never exposed publicly.
+Tasks:
+
+- [x] **Phase 5.1: Database and Domain Foundation** (completed 2026-11-05):
+  - [x] Add role `AUTORIDADE_COMPETENTE` to `UserRole` enum with department scoping.
+  - [x] Add process statuses: `AWAITING_FINAL_AUTHORIZATION`, `AWAITING_PUBLICATION`, `FINAL_AUTHORIZATION_REFUSED`.
+  - [x] Add domain model `FinalAuthorization` (with decisions `AUTHORIZED`, `REFUSED`, `ADJUSTMENT_REQUESTED`).
+  - [x] Add domain model `PublicationRecord` (with types `DIRECT_AWARD_NOTICE`, `AUTHORIZATION_EXTRACT`, `CONTRACT_EXTRACT`, `OTHER`).
+  - [x] Add audit actions for Phase 5 lifecycle milestones.
+  - [x] Database migration `20261105210000_phase_5_1_finalization_publication_foundation` with foreign keys, indexes, and database check constraints.
+  - [x] Domain state-transition foundation (`src/domain/process-lifecycle.js`) with explicit transition matrix and authority guards.
+  - [x] Update demo user seeding with `AUTORIDADE_COMPETENTE` accounts in both demo departments.
+  - [x] Automated unit and integration tests for Phase 5.1 domain and database integrity.
+- [x] **Phase 5.2: Final Authorization Backend Implementation** (completed 2026-11-05):
+  - [x] Dedicated service `src/services/final-authorization.service.js` with operations for initiation, pending inbox, decision details, authorization, refusal, and adjustment requests.
+  - [x] API endpoints: `POST /api/v1/processes/:id/final-authorization/initiate`, `GET /api/v1/final-authorizations`, `GET /api/v1/processes/:id/final-authorization`, `POST /api/v1/processes/:id/final-authorization/authorize`, `POST /api/v1/processes/:id/final-authorization/refuse`, and `POST /api/v1/processes/:id/final-authorization/request-adjustments`.
+  - [x] Strict department isolation and fail-closed permission checks (`AUTORIDADE_COMPETENTE` only, `ADMIN` cannot substitute).
+  - [x] Segregation of duties: authority cannot decide on own requested process (`requesterId !== user.id`).
+  - [x] Pessimistic / row-level status validation inside atomic `prisma.$transaction`.
+  - [x] Dual-layer concurrency and conflict protection with database partial unique index (`idx_final_auth_active_cycle_unique`).
+  - [x] Workflow cycle synchronization ensuring multi-cycle tracing and clean resubmission through Phase 4 review.
+  - [x] Comprehensive automated unit and integration tests (28 new tests, 100% passing).
+- [x] **Phase 5.3: Publication Registration & Process Completion Backend** (completed 2026-11-05):
+  - [x] Dedicated service `src/services/publication.service.js` implementing `registerPublication`, `listPublications`, and `getPublicationDetails`.
+  - [x] API endpoints: `POST /api/v1/processes/:processId/publications`, `GET /api/v1/processes/:processId/publications`, and `GET /api/v1/publications/:publicationId`.
+  - [x] Role authorization (`AGENTE_CONTRATACAO` only), strict fail-closed department isolation, and segregation of duties (`requesterId !== user.id`).
+  - [x] Validation of publication preconditions: process in `AWAITING_PUBLICATION`, active `AUTHORIZED` decision from `AUTORIDADE_COMPETENTE` in current workflow cycle.
+  - [x] Document evidence integration via `documentId` with ownership and active-status checks.
+  - [x] State transition from `AWAITING_PUBLICATION` to terminal `COMPLETED` via optimistic conditional locking (`updateMany`).
+  - [x] Atomic audit logging (`PUBLICATION_REGISTERED` and `PROCESS_COMPLETED`).
+  - [x] Append-only publication ledger with sanitized metadata (no filesystem/storage path exposure).
+  - [x] Automated unit and integration tests (45 new tests, 100% passing).
+- [ ] Phase 5.4: Frontend User Interface & Public Transparency Consultation (decision modals, publication forms, search, allowlisted public details, safe file download).
 
 **Exit criterion:** an approved process can be published, its evidence
 is retained, and the public can consult only the intended public
@@ -1244,7 +1264,7 @@ Implemented and verified on 2026-11-05:
 3. **Demo User Provisioning (`scripts/seed-demo-users.mjs`)**:
    - Provisions 2 isolated departments: `Secretaria de Administração` and `Secretaria de Saúde`.
    - Provisions 7 demo users covering all 4 roles: `admin@sisd.local`, `solicitante@sisd.local`, `agente@sisd.local`, `aprovador@sisd.local`, `solicitante2@sisd.local`, `agente2@sisd.local`, and `aprovador2@sisd.local`.
-   - Default configurable demo password (`SEED_DEMO_PASSWORD`, default `Demo@123456`).
+   - Default configurable demo password (`SEED_DEMO_PASSWORD`, default `password123`).
    - Fully idempotent: preserves passwords and detects role conflicts without silent overwrites.
 4. **Representative Scenario Provisioning (`scripts/seed-demo-scenarios.mjs`)**:
    - Provisions 3 demo suppliers (`Alfa Suprimentos`, `Beta Distribuidora`, `Gama Soluções`).
@@ -1263,14 +1283,72 @@ Implemented and verified on 2026-11-05:
 
 ---
 
-### 14.5 Next Priority: Phase 5 — Authorization, Publication, and Transparency
+### 14.5 Phase 5: Authorization, Publication, and Transparency
 
-With Phase 4 complete, the next phase will implement:
+#### Phase 5.1: Database and Domain Foundation (Completed)
 
-1. Publication eligibility validation for `APPROVED` processes.
-2. Official publication extract generation and persistence.
-3. Public transparency portal with allowlisted fields and document access.
-4. PNCP preparation/integration architecture.
+- **Delivered**:
+  1. Role `AUTORIDADE_COMPETENTE` added to `UserRole` enum and department-scoped.
+  2. Extended process statuses: `AWAITING_FINAL_AUTHORIZATION`, `AWAITING_PUBLICATION`, `FINAL_AUTHORIZATION_REFUSED`.
+  3. `FinalAuthorization` domain model with `FinalAuthorizationDecision` enum (`AUTHORIZED`, `REFUSED`, `ADJUSTMENT_REQUESTED`).
+  4. `PublicationRecord` domain model with `PublicationType` enum (`DIRECT_AWARD_NOTICE`, `AUTHORIZATION_EXTRACT`, `CONTRACT_EXTRACT`, `OTHER`).
+  5. New `AuditAction` enum actions for Phase 5 lifecycle events.
+  6. Migration `20261105210000_phase_5_1_finalization_publication_foundation` deployed with foreign keys, indexes, and database check constraints.
+  7. Centralized domain lifecycle module `src/domain/process-lifecycle.js`.
+  8. Demo user seeding updated to provision `AUTORIDADE_COMPETENTE` accounts in both demo departments.
+  9. Automated test suites: `src/tests/unit/finalizationDomain.test.js` (19 tests) and `src/tests/integration/workflow/phase-5-1-database-integrity.test.js` (14 tests), with all regression suites passing.
+
+#### Phase 5.2: Final Authorization Backend Implementation (Completed)
+
+Phase 5.2 implements the backend workflow services and API endpoints for the final authorization stage:
+
+1. **Service Layer (`src/services/final-authorization.service.js`)**:
+   - `initiateFinalAuthorization`: Initiated by `AGENTE_CONTRATACAO` in the same department for `APPROVED` processes.
+   - `listPendingFinalAuthorizations`: Paginated decision inbox exclusively for `AUTORIDADE_COMPETENTE`.
+   - `getFinalAuthorizationDetails`: Detailed decision review distinguishing active cycle from historical decisions.
+   - `authorizeProcess`: Atomic transition to `AWAITING_PUBLICATION`, recording `FINAL_AUTHORIZATION_GRANTED`.
+   - `refuseFinalAuthorization`: Atomic transition to terminal `FINAL_AUTHORIZATION_REFUSED` with mandatory justification (≥ 10 chars).
+   - `requestFinalAuthorizationAdjustments`: Atomic transition to `RETURNED_FOR_ADJUSTMENT` with mandatory justification (≥ 10 chars), returning through Phase 4 review in cycle 2.
+2. **API Routes**:
+   - `POST /api/v1/processes/:id/final-authorization/initiate`
+   - `GET /api/v1/final-authorizations`
+   - `GET /api/v1/processes/:id/final-authorization`
+   - `POST /api/v1/processes/:id/final-authorization/authorize`
+   - `POST /api/v1/processes/:id/final-authorization/refuse`
+   - `POST /api/v1/processes/:id/final-authorization/request-adjustments`
+3. **Concurrency & Transaction Safety**:
+   - Dual-layer concurrency protection via in-transaction status re-validation and PostgreSQL partial unique index `idx_final_auth_active_cycle_unique` error translation (`P2002` to `ConflictError`).
+4. **Segregation of Duties**:
+   - Authorities and agents cannot act on processes they requested (`requesterId === user.id`).
+
+#### Phase 5.3: Publication Registration & Process Completion Backend (Completed)
+
+Phase 5.3 implements the backend workflow services and API endpoints for publication registration and process completion:
+
+1. **Service Operations (`src/services/publication.service.js`)**:
+   - `registerPublication(processId, user, payload)`: Enforces `AGENTE_CONTRATACAO` role, same department, segregation of duties, `AWAITING_PUBLICATION` status, and active `AUTHORIZED` decision from `AUTORIDADE_COMPETENTE` in current cycle. Validates payload and optional `documentId` evidence. Advances process to `COMPLETED` and records `PUBLICATION_REGISTERED` and `PROCESS_COMPLETED` audit events atomically.
+   - `listPublications(processId, user)`: Department-isolated list of publication records in reverse chronological order with sanitized document metadata.
+   - `getPublicationDetails(publicationId, user)`: Detailed publication view with document metadata and department isolation.
+2. **API Routes**:
+   - `POST /api/v1/processes/:processId/publications` (HTTP 201)
+   - `GET /api/v1/processes/:processId/publications` (HTTP 200)
+   - `GET /api/v1/publications/:publicationId` (HTTP 200)
+3. **Historical Integrity**:
+   - Publication records are append-only.
+   - Concurrency protection via conditional optimistic locking (`updateMany`) prevents duplicate completions or corrupted states.
+4. **Automated Verification**:
+   - 20 unit tests in `src/tests/unit/publicationService.test.js`.
+   - 16 service integration tests in `src/tests/integration/workflow/publication-service.test.js`.
+   - 9 route integration tests in `src/tests/integration/workflow/publication-routes.test.js`.
+   - 100% passing test execution.
+
+#### Next Milestone: Phase 5.4 — Frontend User Interface & Public Transparency Consultation
+
+With the finalization and publication backend complete, Phase 5.4 will implement:
+
+- Final authorization review inbox UI and decision modals for `AUTORIDADE_COMPETENTE`.
+- Publication registration form and document evidence upload for `AGENTE_CONTRATACAO`.
+- Public consultation portal and process completion badges.
 
 ---
 
@@ -1293,4 +1371,4 @@ When implementation changes:
 - Keep legal requirements and external integration behavior current
   and independently verified.
 
-**Current overall status:** Phase 0 (Repository audit and alignment), Phase 1 (Process foundation), Phase 2 (Procurement preparation), Phase 3 (Legal Classification, Justifications & Submission Workflow), and Phase 4 (Internal Analysis and Approval Workflow) are **COMPLETE**. The next priority is **Phase 5: Authorization, Publication, and Transparency**.
+**Current overall status:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, **Phase 5.1 (Database and Domain Foundation)**, **Phase 5.2 (Final Authorization Backend Implementation)**, and **Phase 5.3 (Publication Registration & Process Completion Backend)** are **COMPLETE**. The next priority is **Phase 5.4: Frontend User Interface & Public Transparency Consultation**.

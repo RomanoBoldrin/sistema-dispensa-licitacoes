@@ -5,6 +5,7 @@ import {
   ValidationError,
 } from "@/infra/errors.js";
 import { prisma } from "@/infra/prisma.js";
+import { calculateNextWorkflowCycle } from "@/domain/process-lifecycle.js";
 import { validateLegalClassification } from "./legal.service.js";
 import { canUserAccessProcess, isValidUuid } from "./process.service.js";
 import { buildComparativePriceMap } from "./quotation.service.js";
@@ -15,6 +16,9 @@ export const LOCKED_SUBMISSION_STATUSES = [
   "IN_ANALYSIS",
   "AWAITING_APPROVAL",
   "APPROVED",
+  "AWAITING_FINAL_AUTHORIZATION",
+  "AWAITING_PUBLICATION",
+  "FINAL_AUTHORIZATION_REFUSED",
   "COMPLETED",
   "REJECTED",
 ];
@@ -486,6 +490,10 @@ export async function submitProcess(processId, user) {
         where: { deletedAt: null },
         select: { cycle: true },
       },
+      finalAuthorizations: {
+        where: { deletedAt: null },
+        select: { cycle: true },
+      },
     },
   });
 
@@ -558,9 +566,11 @@ export async function submitProcess(processId, user) {
 
   // 4. Calculate review cycle (increment on resubmission)
   const isResubmission = processRecord.status === "RETURNED_FOR_ADJUSTMENT";
-  const existingCycles = processRecord.approvals?.map((a) => a.cycle) || [];
-  const maxCycle = existingCycles.length > 0 ? Math.max(...existingCycles) : 0;
-  const nextCycle = isResubmission ? maxCycle + 1 : Math.max(1, maxCycle);
+  const nextCycle = calculateNextWorkflowCycle({
+    approvals: processRecord.approvals,
+    finalAuthorizations: processRecord.finalAuthorizations,
+    isResubmission,
+  });
 
   // 5. Atomic transaction: update status, assign Stage 1 task, and log audit events
   const formattedNumber = `DP-${String(processRecord.number).padStart(3, "0")}/${processRecord.year}`;

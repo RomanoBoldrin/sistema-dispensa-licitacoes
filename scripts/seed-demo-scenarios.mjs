@@ -262,8 +262,17 @@ export async function seedDemoScenarios() {
   let aprovadorUser = await prisma.user.findUnique({
     where: { email: "aprovador@sisd.local" },
   });
+  let autoridadeUser = await prisma.user.findUnique({
+    where: { email: "autoridade@sisd.local" },
+  });
 
-  if (!adminDept || !solicitanteUser || !agenteUser || !aprovadorUser) {
+  if (
+    !adminDept ||
+    !solicitanteUser ||
+    !agenteUser ||
+    !aprovadorUser ||
+    !autoridadeUser
+  ) {
     console.log(
       "Prerequisite demo users or department missing. Automatically provisioning demo users...",
     );
@@ -280,6 +289,9 @@ export async function seedDemoScenarios() {
     });
     aprovadorUser = await prisma.user.findUnique({
       where: { email: "aprovador@sisd.local" },
+    });
+    autoridadeUser = await prisma.user.findUnique({
+      where: { email: "autoridade@sisd.local" },
     });
   }
 
