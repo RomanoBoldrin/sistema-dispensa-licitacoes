@@ -264,9 +264,26 @@ Development seeding (`scripts/seed-demo-users.mjs`) provisions `AUTORIDADE_COMPE
   - Publication information represents an internal administrative simulation for demonstration of Lei nº 14.133/2021.
   - No live network requests are made to external portals (such as PNCP or municipal official gazettes).
 
-### Deferred to Subsequent Milestones (Phase 5.4+)
+### Completed in Phase 5.4 (Finalization Frontend Implementation)
 
-- Frontend UI components:
-  - Final authorization review inbox and decision modals (`AUTORIDADE_COMPETENTE`).
-  - Publication registration form and publication evidence attachment (`AGENTE_CONTRATACAO`).
-  - Public transparency view / process completion badge for completed processes.
+- **Dedicated Navigation & Inbox Pages**:
+  - `/final-authorizations`: Executive decision inbox exclusively for `AUTORIDADE_COMPETENTE`. Lists pending processes (`AWAITING_FINAL_AUTHORIZATION`) with pagination, search, responsive table/card layout, refresh, empty, and error retry states.
+  - `/publications`: Dedicated management module for `AGENTE_CONTRATACAO` and staff. Provides filtered listings ("Aguardando Publicação (Prioridade)", "Processos Concluídos", "Todos") with direct action shortcuts.
+- **Process Details Tab Integration (`/processes/[processId]`)**:
+  - `FinalAuthorizationTab.jsx`:
+    - Initiation workflow for `AGENTE_CONTRATACAO` on `APPROVED` processes with modal confirmation and explanatory guidance.
+    - Full executive audit dossier displaying DFD object, legal classification with legal basis & justification, selected supplier and comparative quotations summary, attached documentation, Phase 4 internal approval history, and prior final authorization cycles.
+    - Explicit authority actions: **Autorizar** (transitions to `AWAITING_PUBLICATION`), **Recusar** (mandatory justification $\ge 10$ chars, transitions to terminal `FINAL_AUTHORIZATION_REFUSED`), and **Solicitar Ajustes** (mandatory justification $\ge 10$ chars, transitions to `RETURNED_FOR_ADJUSTMENT`).
+    - Segregation of duties awareness: warns authority if they originally requested the process and disables decision buttons.
+  - `PublicationTab.jsx`:
+    - Prominent simulation disclaimer banner: clearly informs users that publication records are recorded strictly for academic and demonstration purposes of Lei nº 14.133/2021, and that no external network calls to PNCP or municipal official gazettes occur.
+    - Publication registration form for `AGENTE_CONTRATACAO` on `AWAITING_PUBLICATION` status with validation for publication type, destination vehicle, contemporary date, optional reference number, optional external URL, and optional document evidence attachment (with inline file upload support).
+    - Completion warning modal: clearly informs the agent that registering the publication marks the procurement process as `COMPLETED`.
+    - Reverse-chronological publication history view with attached document download links and formatted dates.
+- **Role-Aware Sidebar & Dashboard Overview**:
+  - `DashboardSidebar.jsx`: Dynamic navigation items showing pending badge counters for `AUTORIDADE_COMPETENTE` ("Autorizações Finais") and `AGENTE_CONTRATACAO` ("Módulo de Publicação").
+  - `DashboardOverview.jsx`: Attention cards and KPI statistics tailored to the authenticated user's role (directing authorities to `/final-authorizations` and procurement agents to `/publications`).
+  - `WorkflowStepper`: Full 6-step lifecycle visual stepper (DFD → Cotações → Justificativa Legal → Aprovação Técnica → Autorização Final → Publicação e Conclusão) with terminal badge indicators (`FINAL_AUTHORIZATION_REFUSED`, `RETURNED_FOR_ADJUSTMENT`, `REJECTED`, `COMPLETED`).
+- **Comprehensive Quality Assurance**:
+  - Unit test suite (`src/tests/unit/finalizationFrontend.test.js`) verifying label dictionaries, decision validation guards, publication payload checks, and role authorization logic.
+  - End-to-end integration suite (`src/tests/integration/workflow/finalization-frontend-integration.test.js`) verifying the complete simulated lifecycle across dashboard metrics, initiation, executive authorization/refusal/adjustments, publication registration, and history queries.

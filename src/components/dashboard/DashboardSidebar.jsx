@@ -34,16 +34,39 @@ export default function DashboardSidebar({
           icon: "format_list_bulleted",
           isActualRoute: true,
         },
+        {
+          label: "Processos Devolvidos",
+          href: "/processes?status=RETURNED_FOR_ADJUSTMENT",
+          icon: "assignment_return",
+          isActualRoute: true,
+          allowedRoles: ["SOLICITANTE"],
+        },
       ],
     },
     {
       group: "Gestão & Decisão",
       items: [
         {
+          label: "Autorizações Finais",
+          href: "/final-authorizations",
+          icon: "verified",
+          isActualRoute: true,
+          allowedRoles: ["AUTORIDADE_COMPETENTE"],
+          badge:
+            userRole === "AUTORIDADE_COMPETENTE" && attentionCount > 0
+              ? `${attentionCount} pendente(s)`
+              : null,
+          badgeColor:
+            attentionCount > 0
+              ? "bg-tertiary-fixed text-on-tertiary-fixed-variant"
+              : undefined,
+        },
+        {
           label: "Caixa de Aprovações",
           href: "/approvals",
           icon: "fact_check",
           isActualRoute: true,
+          allowedRoles: ["ADMIN", "APROVADOR", "AGENTE_CONTRATACAO"],
           badge:
             (userRole === "APROVADOR" || userRole === "AGENTE_CONTRATACAO") &&
             attentionCount > 0
@@ -56,9 +79,17 @@ export default function DashboardSidebar({
         },
         {
           label: "Módulo de Publicação",
-          href: null,
+          href: "/publications",
           icon: "public",
-          badge: "Em breve",
+          isActualRoute: true,
+          badge:
+            userRole === "AGENTE_CONTRATACAO" && attentionCount > 0
+              ? "Aguardando"
+              : null,
+          badgeColor:
+            userRole === "AGENTE_CONTRATACAO" && attentionCount > 0
+              ? "bg-secondary-container text-on-secondary-container"
+              : undefined,
         },
       ],
     },
@@ -175,13 +206,19 @@ export default function DashboardSidebar({
 
                 <ul className="mt-1.5 space-y-1">
                   {visibleItems.map((item) => {
+                    const fullCurrentPath = router.asPath;
                     const currentPath = router.asPath.split("?")[0];
                     const isActive =
                       item.href &&
-                      (currentPath === item.href ||
+                      (fullCurrentPath === item.href ||
+                        currentPath === item.href ||
                         (item.href === "/processes" &&
                           currentPath.startsWith("/processes/") &&
-                          currentPath !== "/processes/new"));
+                          currentPath !== "/processes/new") ||
+                        (item.href === "/final-authorizations" &&
+                          currentPath.startsWith("/final-authorizations")) ||
+                        (item.href === "/publications" &&
+                          currentPath.startsWith("/publications")));
 
                     if (item.isActualRoute && item.href) {
                       return (

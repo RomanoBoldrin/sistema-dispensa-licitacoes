@@ -18,6 +18,9 @@ export default function ProcessReviewTab({
   const isAlreadySubmitted = [
     "AWAITING_APPROVAL",
     "APPROVED",
+    "AWAITING_FINAL_AUTHORIZATION",
+    "AWAITING_PUBLICATION",
+    "FINAL_AUTHORIZATION_REFUSED",
     "COMPLETED",
   ].includes(processData?.status);
 

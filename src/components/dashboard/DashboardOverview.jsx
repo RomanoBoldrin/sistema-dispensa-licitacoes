@@ -31,6 +31,27 @@ export default function DashboardOverview({
   const recentProcesses = data?.recentProcesses || [];
   const roleTitle = ROLE_LABELS[user?.role] || user?.role || "Usuário";
 
+  const attentionLink = (() => {
+    if (user?.role === "AUTORIDADE_COMPETENTE") {
+      return { href: "/final-authorizations", label: "Revisar autorizações" };
+    }
+    if (user?.role === "APROVADOR") {
+      return { href: "/approvals", label: "Revisar aprovações" };
+    }
+    if (user?.role === "AGENTE_CONTRATACAO") {
+      return summary.awaitingPublication > 0
+        ? { href: "/publications", label: "Revisar publicações" }
+        : { href: "/processes", label: "Revisar processos" };
+    }
+    if (user?.role === "SOLICITANTE") {
+      return {
+        href: "/processes?status=RETURNED_FOR_ADJUSTMENT",
+        label: "Revisar pendências",
+      };
+    }
+    return { href: "/processes", label: "Revisar processos" };
+  })();
+
   return (
     <div className="space-y-lg">
       {/* Page Title & Action Header */}
@@ -156,10 +177,10 @@ export default function DashboardOverview({
             </div>
           </div>
           <Link
-            href="/processes"
+            href={attentionLink.href}
             className="inline-flex items-center gap-1 self-start sm:self-center rounded-md border border-tertiary/40 bg-surface-container-lowest px-sm py-1.5 font-label-sm text-on-surface transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <span>Revisar processos</span>
+            <span>{attentionLink.label}</span>
             <span
               aria-hidden="true"
               className="material-symbols-outlined text-base"
@@ -190,15 +211,44 @@ export default function DashboardOverview({
           variant="primary"
         />
 
-        {/* Awaiting Approval */}
-        <DashboardStatCard
-          title="Aguardando Aprovação"
-          value={summary.awaitingApproval}
-          subtitle="Pendentes de parecer"
-          icon="hourglass_top"
-          variant={summary.awaitingApproval > 0 ? "tertiary" : "default"}
-          badge={summary.awaitingApproval > 0 ? "Urgente" : undefined}
-        />
+        {/* Awaiting Approval or Final Authorization */}
+        {user?.role === "AUTORIDADE_COMPETENTE" ? (
+          <DashboardStatCard
+            title="Aguardando Autorização"
+            value={summary.awaitingFinalAuthorization || 0}
+            subtitle="Pendentes de deliberação"
+            icon="verified"
+            variant={
+              (summary.awaitingFinalAuthorization || 0) > 0
+                ? "tertiary"
+                : "default"
+            }
+            badge={
+              (summary.awaitingFinalAuthorization || 0) > 0
+                ? "Deliberação"
+                : undefined
+            }
+          />
+        ) : user?.role === "AGENTE_CONTRATACAO" &&
+          (summary.awaitingPublication || 0) > 0 ? (
+          <DashboardStatCard
+            title="Aguardando Publicação"
+            value={summary.awaitingPublication || 0}
+            subtitle="Prontos para registrar"
+            icon="public"
+            variant="tertiary"
+            badge="Publicar"
+          />
+        ) : (
+          <DashboardStatCard
+            title="Aguardando Aprovação"
+            value={summary.awaitingApproval}
+            subtitle="Pendentes de parecer"
+            icon="hourglass_top"
+            variant={summary.awaitingApproval > 0 ? "tertiary" : "default"}
+            badge={summary.awaitingApproval > 0 ? "Urgente" : undefined}
+          />
+        )}
 
         {/* Completed / Approved */}
         <DashboardStatCard
