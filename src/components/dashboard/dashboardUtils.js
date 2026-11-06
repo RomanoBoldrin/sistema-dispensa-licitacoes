@@ -12,6 +12,9 @@ export const STATUS_LABELS = {
   RETURNED_FOR_ADJUSTMENT: "Devolvido para Ajustes",
   REJECTED: "Rejeitado",
   APPROVED: "Aprovado",
+  AWAITING_FINAL_AUTHORIZATION: "Aguardando Autorização Final",
+  AWAITING_PUBLICATION: "Aguardando Publicação",
+  FINAL_AUTHORIZATION_REFUSED: "Autorização Recusada",
   COMPLETED: "Concluído",
 };
 
@@ -30,6 +33,12 @@ export const STATUS_BADGE_STYLES = {
     "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700/40",
   REJECTED: "bg-error-container text-on-error-container border-error/20",
   APPROVED: "bg-primary-fixed text-on-primary-fixed-variant border-primary/20",
+  AWAITING_FINAL_AUTHORIZATION:
+    "bg-tertiary-fixed text-on-tertiary-fixed-variant border-tertiary/30",
+  AWAITING_PUBLICATION:
+    "bg-secondary-container text-on-secondary-container border-secondary/20",
+  FINAL_AUTHORIZATION_REFUSED:
+    "bg-error-container text-on-error-container border-error/20",
   COMPLETED: "bg-primary-fixed text-on-primary-fixed-variant border-primary/20",
 };
 
@@ -38,6 +47,7 @@ export const ROLE_LABELS = {
   SOLICITANTE: "Solicitante",
   AGENTE_CONTRATACAO: "Agente de Contratação",
   APROVADOR: "Aprovador",
+  AUTORIDADE_COMPETENTE: "Autoridade Competente",
 };
 
 export const CATEGORY_LABELS = {
@@ -85,6 +95,13 @@ export const AUDIT_ACTION_LABELS = {
   APPROVAL_STAGE_APPROVED: "Etapa de análise técnica aprovada",
   PROCESS_ADJUSTMENT_REQUESTED: "Ajustes solicitados no processo",
   PROCESS_RESUBMITTED: "Processo ressubmetido após ajustes",
+  FINAL_AUTHORIZATION_INITIATED: "Encaminhado para autorização final",
+  FINAL_AUTHORIZATION_GRANTED: "Autorização final concedida",
+  FINAL_AUTHORIZATION_REFUSED: "Autorização final recusada",
+  FINAL_AUTHORIZATION_ADJUSTMENT_REQUESTED:
+    "Ajustes solicitados pela autoridade competente",
+  PUBLICATION_REGISTERED: "Publicação registrada",
+  PUBLICATION_SUPERSEDED: "Informações de publicação retificadas",
 };
 
 export const LIFECYCLE_STAGES = [

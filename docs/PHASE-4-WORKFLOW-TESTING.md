@@ -20,8 +20,8 @@ The seeding and workflow test suites respect the following environment variables
 | --------------------- | -------------------------- | ---------------------------------------------------------- |
 | `SEED_ADMIN_NAME`     | `Administrador do Sistema` | Full name of the root administrator account                |
 | `SEED_ADMIN_EMAIL`    | `admin@sisd.gov.br`        | Unique email for the system administrator                  |
-| `SEED_ADMIN_PASSWORD` | `Admin@123456`             | Password for administrator provisioning                    |
-| `SEED_DEMO_PASSWORD`  | `Demo@123456`              | Password applied to all 7 demo accounts                    |
+| `SEED_ADMIN_PASSWORD` | `password123`              | Password for administrator provisioning                    |
+| `SEED_DEMO_PASSWORD`  | `password123`              | Password applied to all demo accounts                      |
 | `ENABLE_DEMO_SEED`    | `false`                    | Explicit opt-in safety flag required to populate demo data |
 
 > [!IMPORTANT]
@@ -50,17 +50,19 @@ npm run db:seed:all:dev
 
 ## 3. Demo User Accounts & Roles
 
-All demo accounts are created with password: **`Demo@123456`** (unless overridden via `SEED_DEMO_PASSWORD`).
+All demo accounts are created with password: **`password123`** (unless overridden via `SEED_DEMO_PASSWORD`).
 
-| Email                     | Role                 | Department                  | Scope & Purpose                                                        |
-| ------------------------- | -------------------- | --------------------------- | ---------------------------------------------------------------------- |
-| `admin@sisd.local`        | `ADMIN`              | None (`null`)               | Global administrative oversight; read-only during active workflow      |
-| `solicitante@sisd.local`  | `SOLICITANTE`        | Secretaria de Administração | Department requester; creates DFDs, items, quotes, and submits         |
-| `agente@sisd.local`       | `AGENTE_CONTRATACAO` | Secretaria de Administração | Stage 1 Procurement Agent; reviews technical instruction & quotations  |
-| `aprovador@sisd.local`    | `APROVADOR`          | Secretaria de Administração | Stage 2 Approver; issues final internal approval or terminal rejection |
-| `solicitante2@sisd.local` | `SOLICITANTE`        | Secretaria de Saúde         | Department requester for cross-department isolation testing            |
-| `agente2@sisd.local`      | `AGENTE_CONTRATACAO` | Secretaria de Saúde         | Stage 1 Procurement Agent for cross-department isolation testing       |
-| `aprovador2@sisd.local`   | `APROVADOR`          | Secretaria de Saúde         | Stage 2 Approver for cross-department isolation testing                |
+| Email                     | Role                    | Department                  | Scope & Purpose                                                        |
+| ------------------------- | ----------------------- | --------------------------- | ---------------------------------------------------------------------- |
+| `admin@sisd.local`        | `ADMIN`                 | None (`null`)               | Global administrative oversight; read-only during active workflow      |
+| `solicitante@sisd.local`  | `SOLICITANTE`           | Secretaria de Administração | Department requester; creates DFDs, items, quotes, and submits         |
+| `agente@sisd.local`       | `AGENTE_CONTRATACAO`    | Secretaria de Administração | Stage 1 Procurement Agent; reviews technical instruction & quotations  |
+| `aprovador@sisd.local`    | `APROVADOR`             | Secretaria de Administração | Stage 2 Approver; issues final internal approval or terminal rejection |
+| `autoridade@sisd.local`   | `AUTORIDADE_COMPETENTE` | Secretaria de Administração | Competent Authority; issues final executive authorization (Phase 5)    |
+| `solicitante2@sisd.local` | `SOLICITANTE`           | Secretaria de Saúde         | Department requester for cross-department isolation testing            |
+| `agente2@sisd.local`      | `AGENTE_CONTRATACAO`    | Secretaria de Saúde         | Stage 1 Procurement Agent for cross-department isolation testing       |
+| `aprovador2@sisd.local`   | `APROVADOR`             | Secretaria de Saúde         | Stage 2 Approver for cross-department isolation testing                |
+| `autoridade2@sisd.local`  | `AUTORIDADE_COMPETENTE` | Secretaria de Saúde         | Competent Authority for cross-department isolation testing (Phase 5)   |
 
 ---
 
@@ -97,7 +99,7 @@ Navigate to `http://localhost:3000` in your web browser.
 
 1. **Sign In as Requester**:
    - URL: `/login`
-   - Email: `solicitante@sisd.local` | Password: `Demo@123456`
+   - Email: `solicitante@sisd.local` | Password: `password123`
 2. **Access Draft Process**:
    - Open process **DP-001/2026** (`/processos` -> select DP-001/2026).
    - Verify status is `DRAFT`.
@@ -110,7 +112,7 @@ Navigate to `http://localhost:3000` in your web browser.
      - Process details become read-only for the requester.
      - A banner indicates that the process is under technical analysis.
 4. **Sign In as Procurement Agent**:
-   - Log out and sign in with `agente@sisd.local` | `Demo@123456`.
+   - Log out and sign in with `agente@sisd.local` | `password123`.
 5. **Inspect Review Queue**:
    - Access `/processos`. Process DP-001/2026 now displays badge `IN_ANALYSIS`.
    - Open DP-001/2026.

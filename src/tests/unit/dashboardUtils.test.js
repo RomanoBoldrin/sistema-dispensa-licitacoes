@@ -98,8 +98,12 @@ describe("Dashboard Utilities", () => {
         "PRICE_RESEARCH",
         "SUPPLIER_SELECTED",
         "AWAITING_APPROVAL",
+        "RETURNED_FOR_ADJUSTMENT",
         "REJECTED",
         "APPROVED",
+        "AWAITING_FINAL_AUTHORIZATION",
+        "AWAITING_PUBLICATION",
+        "FINAL_AUTHORIZATION_REFUSED",
         "COMPLETED",
       ];
 
@@ -116,6 +120,7 @@ describe("Dashboard Utilities", () => {
         "SOLICITANTE",
         "AGENTE_CONTRATACAO",
         "APROVADOR",
+        "AUTORIDADE_COMPETENTE",
       ];
 
       expectedRoles.forEach((role) => {

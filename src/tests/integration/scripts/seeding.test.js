@@ -25,7 +25,7 @@ describe("Development Seeding & Workflow Scenarios (Integration Tests)", () => {
   describe("seedDemoUsers()", () => {
     it("provisions the expected departments and demo users", async () => {
       const result = await seedDemoUsers();
-      expect(result.created.length).toBe(7);
+      expect(result.created.length).toBe(9);
       expect(result.conflicts.length).toBe(0);
 
       // Verify departments in database
@@ -38,7 +38,7 @@ describe("Development Seeding & Workflow Scenarios (Integration Tests)", () => {
       expect(adminDept).toBeDefined();
       expect(healthDept).toBeDefined();
 
-      // Verify all 7 users exist with correct roles and departments
+      // Verify all demo users exist with correct roles and departments
       for (const uDef of DEMO_USERS) {
         const dbUser = await prisma.user.findUnique({
           where: { email: uDef.email },
@@ -71,7 +71,7 @@ describe("Development Seeding & Workflow Scenarios (Integration Tests)", () => {
       // Re-run seedDemoUsers
       const reResult = await seedDemoUsers();
       expect(reResult.created.length).toBe(0);
-      expect(reResult.preserved.length).toBe(7);
+      expect(reResult.preserved.length).toBe(DEMO_USERS.length);
 
       // Verify password hash was NOT overwritten
       const checkUser = await prisma.user.findUnique({

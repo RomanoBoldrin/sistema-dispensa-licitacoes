@@ -18,7 +18,7 @@ async function main() {
     ?.toLowerCase()
     ?.trim();
   const rawPassword =
-    process.env.SEED_ADMIN_PASSWORD || (isProduction ? null : "Admin@123456");
+    process.env.SEED_ADMIN_PASSWORD || (isProduction ? null : "password123");
 
   // Production security guards
   if (isProduction) {

@@ -9,7 +9,12 @@ import { prisma } from "@/infra/prisma.js";
 
 const router = createRouter();
 
-const ASSIGNABLE_ROLES = ["SOLICITANTE", "AGENTE_CONTRATACAO", "APROVADOR"];
+const ASSIGNABLE_ROLES = [
+  "SOLICITANTE",
+  "AGENTE_CONTRATACAO",
+  "APROVADOR",
+  "AUTORIDADE_COMPETENTE",
+];
 
 router.post(postHandler);
 

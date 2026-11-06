@@ -35,6 +35,12 @@ export const DEMO_USERS = [
     departmentName: "Secretaria de Administração",
   },
   {
+    name: "Dra. Patrícia Autoridade (Administração)",
+    email: "autoridade@sisd.local",
+    role: "AUTORIDADE_COMPETENTE",
+    departmentName: "Secretaria de Administração",
+  },
+  {
     name: "Mariana Solicitante (Saúde)",
     email: "solicitante2@sisd.local",
     role: "SOLICITANTE",
@@ -52,6 +58,12 @@ export const DEMO_USERS = [
     role: "APROVADOR",
     departmentName: "Secretaria de Saúde",
   },
+  {
+    name: "Dr. Fernando Autoridade (Saúde)",
+    email: "autoridade2@sisd.local",
+    role: "AUTORIDADE_COMPETENTE",
+    departmentName: "Secretaria de Saúde",
+  },
 ];
 
 export async function seedDemoUsers() {
@@ -65,7 +77,7 @@ export async function seedDemoUsers() {
   console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`Target Database: ${sanitizeDatabaseUrl()}`);
 
-  const demoPassword = process.env.SEED_DEMO_PASSWORD || "Demo@123456";
+  const demoPassword = process.env.SEED_DEMO_PASSWORD || "password123";
   console.log(
     `Using demo password: ${demoPassword.slice(0, 4)}*** (configurable via SEED_DEMO_PASSWORD)`,
   );

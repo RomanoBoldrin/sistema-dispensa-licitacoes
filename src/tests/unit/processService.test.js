@@ -55,6 +55,14 @@ describe("processService", () => {
     departmentId: deptBId,
   };
 
+  const autoridadeUser = {
+    id: "77777777-7777-4777-8777-777777777777",
+    name: "Dra. Patrícia Autoridade",
+    email: "patricia@univesp.br",
+    role: "AUTORIDADE_COMPETENTE",
+    departmentId: deptAId,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -76,6 +84,12 @@ describe("processService", () => {
     test("blocks APROVADOR role from creating a process", async () => {
       await expect(
         processService.createProcess(validPayload, aprovadorUser),
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    test("blocks AUTORIDADE_COMPETENTE role from creating a process", async () => {
+      await expect(
+        processService.createProcess(validPayload, autoridadeUser),
       ).rejects.toThrow(ForbiddenError);
     });
 

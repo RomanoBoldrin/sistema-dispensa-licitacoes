@@ -40,6 +40,9 @@ export const PROCESS_STATUSES = [
   "RETURNED_FOR_ADJUSTMENT",
   "REJECTED",
   "APPROVED",
+  "AWAITING_FINAL_AUTHORIZATION",
+  "AWAITING_PUBLICATION",
+  "FINAL_AUTHORIZATION_REFUSED",
   "COMPLETED",
 ];
 
@@ -262,9 +265,15 @@ export function canUserSelectSupplier(user, processRecord) {
   if (!user || !processRecord) return false;
   if (processRecord.deletedAt) return false;
   if (
-    ["AWAITING_APPROVAL", "APPROVED", "COMPLETED", "REJECTED"].includes(
-      processRecord.status,
-    )
+    [
+      "AWAITING_APPROVAL",
+      "APPROVED",
+      "AWAITING_FINAL_AUTHORIZATION",
+      "AWAITING_PUBLICATION",
+      "FINAL_AUTHORIZATION_REFUSED",
+      "COMPLETED",
+      "REJECTED",
+    ].includes(processRecord.status)
   ) {
     return false;
   }
