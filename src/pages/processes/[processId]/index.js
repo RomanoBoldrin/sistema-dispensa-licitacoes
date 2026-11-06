@@ -20,10 +20,12 @@ import {
 } from "@/components/demand-formalization/DemandFormalizationWizard.jsx";
 import ApprovalWorkflowTab from "@/components/procurement/ApprovalWorkflowTab";
 import DocumentManagementTab from "@/components/procurement/DocumentManagementTab";
+import FinalAuthorizationTab from "@/components/procurement/FinalAuthorizationTab";
 import JustificationsTab from "@/components/procurement/JustificationsTab";
 import LegalClassificationTab from "@/components/procurement/LegalClassificationTab";
 import PriceResearchTab from "@/components/procurement/PriceResearchTab";
 import ProcessReviewTab from "@/components/procurement/ProcessReviewTab";
+import PublicationTab from "@/components/procurement/PublicationTab";
 import SupplierManagementTab from "@/components/procurement/SupplierManagementTab";
 
 export async function getServerSideProps(context) {
@@ -136,15 +138,28 @@ export async function getServerSideProps(context) {
 }
 
 const WORKFLOW_STEPS = [
-  { key: "DRAFT", label: "Rascunho", icon: "edit_document" },
-  { key: "IN_ANALYSIS", label: "Análise Técnica", icon: "manage_search" },
+  { key: "DRAFT", label: "1. Demanda (DFD)", icon: "edit_document" },
+  {
+    key: "IN_ANALYSIS",
+    label: "2. Preparação & Análise",
+    icon: "manage_search",
+  },
   {
     key: "AWAITING_APPROVAL",
-    label: "Aprovação Interna",
+    label: "3. Aprovação Interna",
     icon: "hourglass_top",
   },
-  { key: "APPROVED", label: "Aprovado", icon: "fact_check" },
-  { key: "COMPLETED", label: "Concluído", icon: "task_alt" },
+  {
+    key: "AWAITING_FINAL_AUTHORIZATION",
+    label: "4. Autorização Final",
+    icon: "verified",
+  },
+  {
+    key: "AWAITING_PUBLICATION",
+    label: "5. Publicação Oficial",
+    icon: "public",
+  },
+  { key: "COMPLETED", label: "6. Concluído", icon: "task_alt" },
 ];
 
 const MODULE_TABS = [
@@ -189,6 +204,16 @@ const MODULE_TABS = [
     icon: "fact_check",
   },
   {
+    id: "final-authorization",
+    label: "Autorização Final",
+    icon: "verified",
+  },
+  {
+    id: "publications",
+    label: "Publicação",
+    icon: "public",
+  },
+  {
     id: "history",
     label: "Histórico / Auditoria",
     icon: "history",
@@ -201,10 +226,35 @@ const inputClasses =
 const inputErrorClasses = "border-error focus:border-error focus:ring-error/20";
 const labelClasses = "mb-1 block font-label-md text-on-surface";
 
+function getWorkflowStepIndex(status) {
+  switch (status) {
+    case "DRAFT":
+      return 0;
+    case "IN_ANALYSIS":
+    case "PRICE_RESEARCH":
+    case "SUPPLIER_SELECTED":
+      return 1;
+    case "AWAITING_APPROVAL":
+      return 2;
+    case "APPROVED":
+      return 2; // Phase 4 internal approval completed
+    case "AWAITING_FINAL_AUTHORIZATION":
+      return 3;
+    case "AWAITING_PUBLICATION":
+      return 4;
+    case "COMPLETED":
+      return 5;
+    default:
+      return 0;
+  }
+}
+
 function WorkflowStepper({ currentStatus }) {
   const isRejected = currentStatus === "REJECTED";
   const isReturned = currentStatus === "RETURNED_FOR_ADJUSTMENT";
-  const currentIndex = WORKFLOW_STEPS.findIndex((s) => s.key === currentStatus);
+  const isRefused = currentStatus === "FINAL_AUTHORIZATION_REFUSED";
+  const isCompletedProcess = currentStatus === "COMPLETED";
+  const currentIndex = getWorkflowStepIndex(currentStatus);
 
   return (
     <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-md">
@@ -213,8 +263,8 @@ function WorkflowStepper({ currentStatus }) {
           Progresso da Tramitação
         </h2>
         {isRejected && (
-          <span className="rounded-full bg-error-container px-2.5 py-0.5 font-label-sm text-on-error-container">
-            Processo Rejeitado na Etapa de Aprovação
+          <span className="rounded-full bg-error-container px-2.5 py-0.5 font-label-sm font-semibold text-on-error-container">
+            Processo Rejeitado na Etapa de Aprovação Interna
           </span>
         )}
         {isReturned && (
@@ -222,16 +272,36 @@ function WorkflowStepper({ currentStatus }) {
             Devolvido para Ajustes do Solicitante
           </span>
         )}
+        {isRefused && (
+          <span className="rounded-full bg-error-container px-2.5 py-0.5 font-label-sm font-bold text-on-error-container border border-error/30">
+            Autorização Final Recusada pela Autoridade Competente
+          </span>
+        )}
+        {isCompletedProcess && (
+          <span className="rounded-full bg-primary-fixed px-2.5 py-0.5 font-label-sm font-bold text-on-primary-fixed-variant border border-primary/20">
+            Processo Concluído com Publicação Oficial Registrada
+          </span>
+        )}
       </div>
 
       <ol
         aria-label="Etapas do fluxo do processo"
-        className="grid grid-cols-2 gap-xs sm:grid-cols-5"
+        className="grid grid-cols-2 gap-xs sm:grid-cols-3 lg:grid-cols-6"
       >
         {WORKFLOW_STEPS.map((step, index) => {
-          const isCompleted =
-            !isRejected && !isReturned && currentIndex > index;
-          const isActive = !isRejected && !isReturned && currentIndex === index;
+          const isCompletedStep =
+            !isRejected &&
+            !isReturned &&
+            !isRefused &&
+            (isCompletedProcess ||
+              currentIndex > index ||
+              (currentStatus === "APPROVED" && index <= 2));
+          const isActive =
+            !isRejected &&
+            !isReturned &&
+            !isRefused &&
+            !isCompletedProcess &&
+            currentIndex === index;
 
           return (
             <li
@@ -240,7 +310,7 @@ function WorkflowStepper({ currentStatus }) {
               className={`flex items-center gap-xs rounded-md border p-2 text-xs transition-colors ${
                 isActive
                   ? "border-primary bg-primary/10 font-bold text-primary"
-                  : isCompleted
+                  : isCompletedStep
                     ? "border-primary/30 bg-surface-container-low text-on-surface"
                     : "border-outline-variant/40 bg-surface-container-lowest text-outline"
               }`}
@@ -248,10 +318,10 @@ function WorkflowStepper({ currentStatus }) {
               <span
                 aria-hidden="true"
                 className={`material-symbols-outlined text-base ${
-                  isActive || isCompleted ? "text-primary" : "text-outline"
+                  isActive || isCompletedStep ? "text-primary" : "text-outline"
                 }`}
               >
-                {isCompleted ? "check_circle" : step.icon}
+                {isCompletedStep ? "check_circle" : step.icon}
               </span>
               <span className="truncate">{step.label}</span>
             </li>
@@ -738,6 +808,170 @@ export default function ProcessDetailPage({
 
           {/* Workflow Progress Stepper */}
           <WorkflowStepper currentStatus={processData.status} />
+
+          {/* Situational Workflow Phase 5 Banners */}
+          {processData.status === "APPROVED" && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm rounded-lg border border-primary/30 bg-primary/5 p-md text-on-surface">
+              <div className="flex items-center gap-sm">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-2xl text-primary"
+                >
+                  check_circle
+                </span>
+                <div>
+                  <p className="font-label-md font-bold text-on-surface">
+                    Aprovação Interna Concluída (Fase 4)
+                  </p>
+                  <p className="font-body-sm text-xs text-on-surface-variant">
+                    O processo foi aprovado tecnicamente e está pronto para ser
+                    encaminhado à deliberação da Autoridade Competente.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("final-authorization")}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-md py-1.5 font-label-sm font-semibold text-on-primary hover:bg-primary/90"
+              >
+                <span>Acessar Autorização Final</span>
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-base"
+                >
+                  arrow_forward
+                </span>
+              </button>
+            </div>
+          )}
+
+          {processData.status === "AWAITING_FINAL_AUTHORIZATION" && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm rounded-lg border border-tertiary/40 bg-tertiary-fixed/30 p-md text-on-tertiary-fixed-variant">
+              <div className="flex items-center gap-sm">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-2xl text-tertiary"
+                >
+                  hourglass_top
+                </span>
+                <div>
+                  <p className="font-label-md font-bold text-on-surface">
+                    Aguardando Autorização Final (Fase 5)
+                  </p>
+                  <p className="font-body-sm text-xs text-on-surface-variant">
+                    Processo submetido para deliberação soberana da Autoridade
+                    Competente do departamento.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("final-authorization")}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-md py-1.5 font-label-sm font-semibold text-on-primary hover:bg-primary/90"
+              >
+                <span>Ver Deliberação</span>
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-base"
+                >
+                  arrow_forward
+                </span>
+              </button>
+            </div>
+          )}
+
+          {processData.status === "AWAITING_PUBLICATION" && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm rounded-lg border border-secondary/40 bg-secondary-container/40 p-md text-on-secondary-container">
+              <div className="flex items-center gap-sm">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-2xl text-secondary"
+                >
+                  campaign
+                </span>
+                <div>
+                  <p className="font-label-md font-bold text-on-surface">
+                    Autorização Deferida — Aguardando Publicação Oficial
+                  </p>
+                  <p className="font-body-sm text-xs text-on-surface-variant">
+                    A contratação direta foi homologada. Registre o ato de
+                    publicação para concluir formalmente o procedimento.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("publications")}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-md py-1.5 font-label-sm font-semibold text-on-primary hover:bg-primary/90"
+              >
+                <span>Registrar Publicação</span>
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-base"
+                >
+                  arrow_forward
+                </span>
+              </button>
+            </div>
+          )}
+
+          {processData.status === "FINAL_AUTHORIZATION_REFUSED" && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm rounded-lg border border-error/30 bg-error-container/40 p-md text-on-error-container">
+              <div className="flex items-center gap-sm">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-2xl text-error"
+                >
+                  cancel
+                </span>
+                <div>
+                  <p className="font-label-md font-bold">
+                    Autorização Final Recusada (Status Terminal)
+                  </p>
+                  <p className="font-body-sm text-xs">
+                    A Autoridade Competente recusou a autorização deste
+                    processo. O procedimento encontra-se encerrado.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("final-authorization")}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-error/40 bg-surface-container-lowest px-md py-1.5 font-label-sm font-semibold text-on-surface hover:bg-surface-container"
+              >
+                <span>Ver Motivo da Recusa</span>
+              </button>
+            </div>
+          )}
+
+          {processData.status === "COMPLETED" && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm rounded-lg border border-primary/30 bg-primary-fixed/20 p-md text-on-primary-fixed-variant">
+              <div className="flex items-center gap-sm">
+                <span
+                  aria-hidden="true"
+                  className="material-symbols-outlined text-2xl text-primary"
+                >
+                  task_alt
+                </span>
+                <div>
+                  <p className="font-label-md font-bold text-on-surface">
+                    Processo Concluído com Publicação Registrada
+                  </p>
+                  <p className="font-body-sm text-xs text-on-surface-variant">
+                    O procedimento administrativo de dispensa de licitação foi
+                    encerrado com êxito na simulação.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("publications")}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/40 bg-surface-container-lowest px-md py-1.5 font-label-sm font-semibold text-on-surface hover:bg-surface-container"
+              >
+                <span>Ver Comprovantes</span>
+              </button>
+            </div>
+          )}
 
           {/* Module Navigation Tabs */}
           <div className="border-b border-outline-variant">
@@ -1732,6 +1966,50 @@ export default function ProcessDetailPage({
                 workflowState={workflowState}
                 user={user}
                 onWorkflowActionSuccess={(msg) => {
+                  setFeedbackBanner({
+                    type: "success",
+                    message: msg,
+                  });
+                  refreshProcessData();
+                }}
+              />
+            </div>
+          )}
+
+          {/* Tab Panel: Final Authorization */}
+          {activeTab === "final-authorization" && (
+            <div
+              id="tabpanel-final-authorization"
+              role="tabpanel"
+              aria-labelledby="tab-final-authorization"
+            >
+              <FinalAuthorizationTab
+                processId={processData.id}
+                processData={processData}
+                user={user}
+                onActionSuccess={(msg) => {
+                  setFeedbackBanner({
+                    type: "success",
+                    message: msg,
+                  });
+                  refreshProcessData();
+                }}
+              />
+            </div>
+          )}
+
+          {/* Tab Panel: Publication */}
+          {activeTab === "publications" && (
+            <div
+              id="tabpanel-publications"
+              role="tabpanel"
+              aria-labelledby="tab-publications"
+            >
+              <PublicationTab
+                processId={processData.id}
+                processData={processData}
+                user={user}
+                onActionSuccess={(msg) => {
                   setFeedbackBanner({
                     type: "success",
                     message: msg,

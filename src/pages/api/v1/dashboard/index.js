@@ -19,6 +19,9 @@ const STATUS_KEYS = [
   "RETURNED_FOR_ADJUSTMENT",
   "REJECTED",
   "APPROVED",
+  "AWAITING_FINAL_AUTHORIZATION",
+  "AWAITING_PUBLICATION",
+  "FINAL_AUTHORIZATION_REFUSED",
   "COMPLETED",
 ];
 
@@ -31,6 +34,9 @@ const STATUS_LABELS = {
   RETURNED_FOR_ADJUSTMENT: "Devolvido p/ Ajustes",
   REJECTED: "Rejeitado",
   APPROVED: "Aprovado",
+  AWAITING_FINAL_AUTHORIZATION: "Aguardando Aut. Final",
+  AWAITING_PUBLICATION: "Aguardando Publicação",
+  FINAL_AUTHORIZATION_REFUSED: "Aut. Recusada",
   COMPLETED: "Concluído",
 };
 
@@ -95,6 +101,40 @@ async function getHandler(request, response) {
     where: {
       ...where,
       status: "REJECTED",
+    },
+  });
+
+  const awaitingFinalAuthorization = await prisma.process.count({
+    where: {
+      ...where,
+      status: "AWAITING_FINAL_AUTHORIZATION",
+      ...(user.role === "AUTORIDADE_COMPETENTE" && user.departmentId
+        ? { departmentId: user.departmentId }
+        : {}),
+    },
+  });
+
+  const awaitingPublication = await prisma.process.count({
+    where: {
+      ...where,
+      status: "AWAITING_PUBLICATION",
+      ...(user.role === "AGENTE_CONTRATACAO" && user.departmentId
+        ? { departmentId: user.departmentId }
+        : {}),
+    },
+  });
+
+  const finalAuthorizationRefused = await prisma.process.count({
+    where: {
+      ...where,
+      status: "FINAL_AUTHORIZATION_REFUSED",
+    },
+  });
+
+  const returnedForAdjustment = await prisma.process.count({
+    where: {
+      ...where,
+      status: "RETURNED_FOR_ADJUSTMENT",
     },
   });
 
@@ -210,19 +250,26 @@ async function getHandler(request, response) {
   // 6. Actionable attention count based on domain role
   let attentionCount = 0;
   let attentionDescription = "";
-  if (user.role === "APROVADOR") {
+  if (user.role === "AUTORIDADE_COMPETENTE") {
+    attentionCount = awaitingFinalAuthorization;
+    attentionDescription =
+      attentionCount === 1
+        ? "processo aguardando sua autorização final"
+        : "processos aguardando sua autorização final";
+  } else if (user.role === "APROVADOR") {
     attentionCount = awaitingApproval;
     attentionDescription = "processos aguardando sua aprovação";
   } else if (user.role === "SOLICITANTE") {
-    attentionCount = rejected + drafts;
+    attentionCount = returnedForAdjustment + drafts;
     attentionDescription =
-      "rascunhos ou processos rejeitados necessitando ajuste";
+      "rascunhos ou processos devolvidos necessitando ajuste";
   } else if (user.role === "AGENTE_CONTRATACAO") {
-    attentionCount = inProgress;
-    attentionDescription = "processos em cotação e análise";
+    attentionCount = inProgress + awaitingPublication;
+    attentionDescription =
+      "processos em instrução ou aguardando registro de publicação";
   } else {
-    attentionCount = awaitingApproval + rejected;
-    attentionDescription = "processos aguardando aprovação ou rejeitados";
+    attentionCount = awaitingApproval + awaitingFinalAuthorization;
+    attentionDescription = "processos com deliberações pendentes no sistema";
   }
 
   return response.status(200).json({
@@ -230,6 +277,10 @@ async function getHandler(request, response) {
       totalProcesses,
       inProgress,
       awaitingApproval,
+      awaitingFinalAuthorization,
+      awaitingPublication,
+      finalAuthorizationRefused,
+      returnedForAdjustment,
       completed,
       drafts,
       rejected,

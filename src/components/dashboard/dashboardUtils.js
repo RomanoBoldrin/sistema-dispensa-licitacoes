@@ -50,6 +50,44 @@ export const ROLE_LABELS = {
   AUTORIDADE_COMPETENTE: "Autoridade Competente",
 };
 
+export const PUBLICATION_TYPE_LABELS = {
+  DIRECT_AWARD_NOTICE: "Aviso de Contratação Direta",
+  AUTHORIZATION_EXTRACT: "Extrato de Autorização",
+  CONTRACT_EXTRACT: "Extrato de Contrato",
+  OTHER: "Outro",
+};
+
+export const FINAL_AUTHORIZATION_DECISION_LABELS = {
+  AUTHORIZED: "Autorizado pela autoridade competente",
+  REFUSED: "Autorização recusada",
+  ADJUSTMENT_REQUESTED: "Devolvido para ajustes",
+};
+
+export const FINAL_AUTHORIZATION_BADGES = {
+  AUTHORIZED: {
+    label: "Autorizado pela autoridade competente",
+    classes: "bg-primary-fixed text-on-primary-fixed-variant border-primary/20",
+    icon: "verified",
+  },
+  REFUSED: {
+    label: "Autorização recusada",
+    classes: "bg-error-container text-on-error-container border-error/20",
+    icon: "cancel",
+  },
+  ADJUSTMENT_REQUESTED: {
+    label: "Devolvido para ajustes",
+    classes:
+      "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700/40",
+    icon: "assignment_return",
+  },
+  AWAITING_FINAL_AUTHORIZATION: {
+    label: "Aguardando autorização final",
+    classes:
+      "bg-tertiary-fixed text-on-tertiary-fixed-variant border-tertiary/30",
+    icon: "hourglass_top",
+  },
+};
+
 export const CATEGORY_LABELS = {
   IT_GOODS: "Bens de TI",
   COMMON_GOODS: "Materiais Comuns",
