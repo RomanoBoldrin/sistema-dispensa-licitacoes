@@ -546,6 +546,6 @@ Documentação
 
 ## Status
 
-**Em desenvolvimento — Planejamento / MVP**
+**Concluído / MVP**
 
-O escopo e a arquitetura podem ser refinados conforme o desenvolvimento e as necessidades acadêmicas do Projeto Integrador.
+O escopo e a arquitetura ainda podem ser refinados conforme o feedback da comunidade externa, porém, o trabalho presente trabalho encontra-se finalizado.
